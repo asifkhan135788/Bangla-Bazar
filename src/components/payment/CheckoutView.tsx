@@ -28,6 +28,8 @@ interface FieldErrors {
   home?: string
   paymentMethod?: string
   transactionId?: string
+  paymentAmount?: string
+  fromNumber?: string
 }
 
 interface PaymentSettings {
@@ -51,6 +53,8 @@ export function CheckoutView() {
   const [locationLoading, setLocationLoading] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [transactionId, setTransactionId] = useState('')
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [fromNumber, setFromNumber] = useState('')
   const [note, setNote] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
@@ -119,15 +123,17 @@ export function CheckoutView() {
         className="flex flex-col items-center justify-center min-h-[60vh] px-6 bg-background"
       >
         <div className="text-center">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-4">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          <h2 className="text-lg font-bold text-foreground mb-2">Please login to checkout</h2>
+          <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center nb-card bg-[#FFD700]/10 p-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-heading font-black text-foreground mb-2">Please login to checkout</h2>
           <p className="text-sm text-muted-foreground mb-4">You need an account to place orders</p>
           <button
             onClick={() => navigate('login')}
-            className="px-6 py-3 rounded-xl font-semibold text-sm bg-[#FFD700] text-[#0A0A0A]"
+            className="nb-btn px-6 py-3 bg-[#FFD700] text-[#0A0A0A] text-sm"
           >
             Login Now
           </button>
@@ -144,16 +150,18 @@ export function CheckoutView() {
         animate={{ opacity: 1 }}
         className="flex flex-col items-center justify-center min-h-[60vh] px-6 bg-background"
       >
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-4">
-          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <path d="M16 10a4 4 0 0 1-8 0" />
-        </svg>
-        <h2 className="text-lg font-bold text-foreground mb-2">Your cart is empty</h2>
+        <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center nb-card bg-[#FFD700]/10 p-4">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-heading font-black text-foreground mb-2">Your cart is empty</h2>
         <p className="text-sm text-muted-foreground mb-4">Add some items before checkout</p>
         <button
           onClick={() => navigate('home')}
-          className="px-6 py-3 rounded-xl font-semibold text-sm bg-[#FFD700] text-[#0A0A0A]"
+          className="nb-btn px-6 py-3 bg-[#FFD700] text-[#0A0A0A] text-sm"
         >
           Browse Products
         </button>
@@ -174,6 +182,18 @@ export function CheckoutView() {
   const handleTransactionIdChange = (value: string) => {
     setTransactionId(forceTransactionUppercase(value))
     if (errors.transactionId) setErrors(prev => ({ ...prev, transactionId: undefined }))
+  }
+
+  const handleAmountChange = (value: string) => {
+    const sanitized = value.replace(/[^0-9]/g, '')
+    setPaymentAmount(sanitized)
+    if (errors.paymentAmount) setErrors(prev => ({ ...prev, paymentAmount: undefined }))
+  }
+
+  const handleFromNumberChange = (value: string) => {
+    const sanitized = value.replace(/[^0-9]/g, '')
+    setFromNumber(sanitized)
+    if (errors.fromNumber) setErrors(prev => ({ ...prev, fromNumber: undefined }))
   }
 
   const handleAddressChange = (value: string) => {
@@ -243,6 +263,12 @@ export function CheckoutView() {
       if (!zilla.trim()) addrErrors.zilla = 'District (Zilla) is required'
       if (!upazila.trim()) addrErrors.upazila = 'Upazila is required'
       if (!home.trim()) addrErrors.home = 'Home/Holding number is required'
+      // Validate payment amount & from number for bkash/nagad
+      if (paymentMethod === 'bkash' || paymentMethod === 'nagad') {
+        if (!paymentAmount.trim()) addrErrors.paymentAmount = 'Amount is required'
+        if (!fromNumber.trim()) addrErrors.fromNumber = 'From number is required'
+        else if (fromNumber.length < 11) addrErrors.fromNumber = 'Enter a valid 11-digit number'
+      }
       if (Object.keys(addrErrors).length > 0) {
         setErrors(addrErrors)
         return false
@@ -338,7 +364,7 @@ export function CheckoutView() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
-          className="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center mb-6"
+          className="w-24 h-24 nb-card bg-[#4ECDC4]/10 flex items-center justify-center mb-6"
         >
           <motion.svg
             initial={{ pathLength: 0 }}
@@ -348,8 +374,8 @@ export function CheckoutView() {
             height="48"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#22c55e"
-            strokeWidth="2.5"
+            stroke="#4ECDC4"
+            strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -366,7 +392,7 @@ export function CheckoutView() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="text-2xl font-bold text-foreground mb-2"
+          className="text-2xl font-heading font-black text-foreground mb-2"
         >
           Order Placed!
         </motion.h2>
@@ -385,20 +411,20 @@ export function CheckoutView() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="w-full max-w-sm bg-card border border-border rounded-2xl p-5 mb-6"
+          className="w-full max-w-sm nb-card-static bg-card p-5 mb-6"
         >
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Order ID</span>
-              <span className="text-sm font-mono font-bold text-foreground">#{orderSuccess.orderId}</span>
+              <span className="text-sm font-bold text-muted-foreground">Order ID</span>
+              <span className="text-sm font-mono font-black text-foreground">#{orderSuccess.orderId}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Total</span>
-              <span className="text-sm font-bold text-[#FFD700]">৳{orderSuccess.total.toLocaleString()}</span>
+              <span className="text-sm font-bold text-muted-foreground">Total</span>
+              <span className="text-sm font-black text-[#FFD700]">৳{orderSuccess.total.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Payment</span>
-              <span className="text-sm font-medium text-foreground capitalize">{orderSuccess.paymentMethod}</span>
+              <span className="text-sm font-bold text-muted-foreground">Payment</span>
+              <span className="text-sm font-extrabold text-foreground uppercase">{orderSuccess.paymentMethod}</span>
             </div>
           </div>
         </motion.div>
@@ -411,13 +437,13 @@ export function CheckoutView() {
         >
           <button
             onClick={() => navigate('profile')}
-            className="px-6 py-3 rounded-xl text-sm font-semibold bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D] transition-colors"
+            className="nb-btn px-6 py-3 bg-[#FFD700] text-[#0A0A0A] text-sm"
           >
             View Orders
           </button>
           <button
             onClick={() => navigate('home')}
-            className="px-6 py-3 rounded-xl text-sm font-semibold border border-border bg-card text-foreground hover:bg-[#FFD700]/5 transition-colors"
+            className="nb-btn px-6 py-3 bg-card text-foreground text-sm"
           >
             Continue Shopping
           </button>
@@ -432,19 +458,19 @@ export function CheckoutView() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-14 z-10 backdrop-blur-sm border-b border-border px-4 py-3 bg-background/95"
+        className="sticky top-14 z-10 bg-background border-b-[3px] border-foreground px-4 py-3"
       >
         <div className="flex items-center gap-3 max-w-2xl mx-auto">
           <button
             onClick={() => navigate('cart')}
-            className="p-1.5 rounded-lg transition-colors text-[#FFD700]"
+            className="p-1.5 transition-colors text-[#FFD700]"
             aria-label="Go back"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-          <h1 className="text-lg font-bold text-foreground">Checkout</h1>
+          <h1 className="text-lg font-heading font-black text-foreground">Checkout</h1>
         </div>
       </motion.div>
 
@@ -453,9 +479,10 @@ export function CheckoutView() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl p-5 bg-card"
+          className="nb-card-static bg-card p-5"
         >
-          <h2 className="text-base font-bold text-foreground mb-4">Order Summary</h2>
+          <h2 className="font-heading font-black text-foreground text-base mb-1">Order Summary</h2>
+          <div className="nb-accent-bar w-16 mb-4" />
 
           <div className="space-y-3 max-h-48 overflow-y-auto mb-4">
             {items.map((item) => {
@@ -463,12 +490,12 @@ export function CheckoutView() {
               return (
                 <div key={item.productId} className="flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-input">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border-2 border-foreground bg-muted">
                       {item.image ? (
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1.5">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="3" y="3" width="18" height="18" rx="2" />
                             <circle cx="8.5" cy="8.5" r="1.5" />
                             <polyline points="21 15 16 10 5 21" />
@@ -477,11 +504,11 @@ export function CheckoutView() {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm text-foreground truncate">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">x{item.quantity}</p>
+                      <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground font-bold">x{item.quantity}</p>
                     </div>
                   </div>
-                  <span className="text-sm font-semibold text-foreground shrink-0 ml-2">
+                  <span className="text-sm font-black text-[#FFD700] shrink-0 ml-2">
                     ৳{(effectivePrice * item.quantity).toLocaleString()}
                   </span>
                 </div>
@@ -489,18 +516,18 @@ export function CheckoutView() {
             })}
           </div>
 
-          <div className="border-t border-border pt-3 space-y-2">
+          <div className="nb-divider pt-3 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="text-foreground">৳{subtotal.toLocaleString()}</span>
+              <span className="text-muted-foreground font-bold">Subtotal</span>
+              <span className="text-foreground font-black">৳{subtotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Delivery Fee</span>
-              <span className="text-foreground">৳{deliveryFee}</span>
+              <span className="text-muted-foreground font-bold">Delivery Fee</span>
+              <span className="text-foreground font-black">৳{deliveryFee}</span>
             </div>
-            <div className="flex justify-between text-base font-bold pt-2 border-t border-border">
+            <div className="flex justify-between text-base font-heading font-black pt-2 border-t-[2px] border-foreground">
               <span className="text-foreground">Total</span>
-              <span className="text-[#FFD700]">৳{total.toLocaleString()}</span>
+              <span className="text-[#FFD700] font-black">৳{total.toLocaleString()}</span>
             </div>
           </div>
         </motion.div>
@@ -510,13 +537,14 @@ export function CheckoutView() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="rounded-2xl p-5 bg-card"
+          className="nb-card-static bg-card p-5"
         >
-          <h2 className="text-base font-bold text-foreground mb-4">Customer Information</h2>
+          <h2 className="font-heading font-black text-foreground text-base mb-1">Customer Information</h2>
+          <div className="nb-accent-bar w-16 mb-4" />
 
           {/* Name */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-foreground mb-1.5">
+            <label className="block text-sm font-bold text-foreground mb-1.5">
               Full Name <span className="text-[#f42a41]">*</span>
             </label>
             <input
@@ -524,17 +552,15 @@ export function CheckoutView() {
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="Enter your full name"
-              className={`w-full px-4 py-3 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background ${
-                errors.name ? 'border border-[#f42a41]' : 'border border-border'
-              }`}
+              className={`nb-input w-full px-4 py-3 text-sm text-foreground placeholder-muted-foreground bg-background ${errors.name ? 'border-[#EF4444] shadow-[3px_3px_0px_var(--foreground)]' : ''}`}
             />
             <p className="text-xs text-muted-foreground mt-1">English letters only (Bengali not supported in payment fields)</p>
-            {errors.name && <p className="text-xs mt-1 text-[#f42a41]">{errors.name}</p>}
+            {errors.name && <p className="text-xs mt-1 text-[#EF4444] font-bold">{errors.name}</p>}
           </div>
 
           {/* Phone */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-foreground mb-1.5">
+            <label className="block text-sm font-bold text-foreground mb-1.5">
               Phone Number <span className="text-[#f42a41]">*</span>
             </label>
             <input
@@ -542,17 +568,15 @@ export function CheckoutView() {
               value={phone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               placeholder="+880 1XXXXXXXXX"
-              className={`w-full px-4 py-3 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background ${
-                errors.phone ? 'border border-[#f42a41]' : 'border border-border'
-              }`}
+              className={`nb-input w-full px-4 py-3 text-sm text-foreground placeholder-muted-foreground bg-background ${errors.phone ? 'border-[#EF4444] shadow-[3px_3px_0px_var(--foreground)]' : ''}`}
             />
             <p className="text-xs text-muted-foreground mt-1">BD format: +880 or 01 prefix, max 11 digits after country code</p>
-            {errors.phone && <p className="text-xs mt-1 text-[#f42a41]">{errors.phone}</p>}
+            {errors.phone && <p className="text-xs mt-1 text-[#EF4444] font-bold">{errors.phone}</p>}
           </div>
 
           {/* Address - Structured BD Format */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-foreground mb-1.5">
+            <label className="block text-sm font-bold text-foreground mb-1.5">
               Delivery Address <span className="text-[#f42a41]">*</span>
             </label>
 
@@ -563,11 +587,9 @@ export function CheckoutView() {
                 value={zilla}
                 onChange={(e) => { setZilla(e.target.value); if (errors.zilla) setErrors(prev => ({ ...prev, zilla: undefined })) }}
                 placeholder="জেলা / District (e.g. ঢাকা, চট্টগ্রাম)"
-                className={`w-full px-4 py-2.5 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background ${
-                  errors.zilla ? 'border border-[#f42a41]' : 'border border-border'
-                }`}
+                className={`nb-input w-full px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground bg-background ${errors.zilla ? 'border-[#EF4444] shadow-[3px_3px_0px_var(--foreground)]' : ''}`}
               />
-              {errors.zilla && <p className="text-xs mt-1 text-[#f42a41]">{errors.zilla}</p>}
+              {errors.zilla && <p className="text-xs mt-1 text-[#EF4444] font-bold">{errors.zilla}</p>}
             </div>
 
             {/* Upazila */}
@@ -577,11 +599,9 @@ export function CheckoutView() {
                 value={upazila}
                 onChange={(e) => { setUpazila(e.target.value); if (errors.upazila) setErrors(prev => ({ ...prev, upazila: undefined })) }}
                 placeholder="উপজেলা / Upazila (e.g. সদর, মিরপুর)"
-                className={`w-full px-4 py-2.5 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background ${
-                  errors.upazila ? 'border border-[#f42a41]' : 'border border-border'
-                }`}
+                className={`nb-input w-full px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground bg-background ${errors.upazila ? 'border-[#EF4444] shadow-[3px_3px_0px_var(--foreground)]' : ''}`}
               />
-              {errors.upazila && <p className="text-xs mt-1 text-[#f42a41]">{errors.upazila}</p>}
+              {errors.upazila && <p className="text-xs mt-1 text-[#EF4444] font-bold">{errors.upazila}</p>}
             </div>
 
             {/* Gram (Village/Area) */}
@@ -591,7 +611,7 @@ export function CheckoutView() {
                 value={gram}
                 onChange={(e) => setGram(e.target.value)}
                 placeholder="গ্রাম/এলাকা / Village/Area (optional)"
-                className="w-full px-4 py-2.5 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background border border-border"
+                className="nb-input w-full px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground bg-background"
               />
             </div>
 
@@ -602,11 +622,9 @@ export function CheckoutView() {
                 value={home}
                 onChange={(e) => { setHome(e.target.value); if (errors.home) setErrors(prev => ({ ...prev, home: undefined })) }}
                 placeholder="বাড়ি/হোল্ডিং / Home & Holding No. *"
-                className={`w-full px-4 py-2.5 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background ${
-                  errors.home ? 'border border-[#f42a41]' : 'border border-border'
-                }`}
+                className={`nb-input w-full px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground bg-background ${errors.home ? 'border-[#EF4444] shadow-[3px_3px_0px_var(--foreground)]' : ''}`}
               />
-              {errors.home && <p className="text-xs mt-1 text-[#f42a41]">{errors.home}</p>}
+              {errors.home && <p className="text-xs mt-1 text-[#EF4444] font-bold">{errors.home}</p>}
             </div>
 
             {/* Live Location */}
@@ -615,7 +633,7 @@ export function CheckoutView() {
                 type="button"
                 onClick={handleGetLocation}
                 disabled={locationLoading}
-                className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 border border-[#FFD700]/40 bg-[#FFD700]/5 text-[#FFD700] hover:bg-[#FFD700]/10 transition-colors disabled:opacity-50"
+                className="nb-btn-sm w-full py-2.5 text-sm font-bold flex items-center justify-center gap-2 border-[#FFD700] bg-[#FFD700]/5 text-[#FFD700] hover:bg-[#FFD700]/10 disabled:opacity-50"
               >
                 {locationLoading ? (
                   <>
@@ -627,7 +645,7 @@ export function CheckoutView() {
                   </>
                 ) : (
                   <>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                       <circle cx="12" cy="10" r="3" />
                     </svg>
@@ -636,7 +654,7 @@ export function CheckoutView() {
                 )}
               </button>
               {liveLocation && (
-                <p className="text-xs text-green-500 mt-1 text-center">
+                <p className="text-xs text-[#4ECDC4] mt-1 text-center font-bold">
                   Location captured: {liveLocation.lat.toFixed(4)}, {liveLocation.lng.toFixed(4)}
                 </p>
               )}
@@ -648,7 +666,7 @@ export function CheckoutView() {
 
           {/* Note */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
+            <label className="block text-sm font-bold text-foreground mb-1.5">
               Order Note <span className="text-muted-foreground">(optional)</span>
             </label>
             <input
@@ -657,7 +675,7 @@ export function CheckoutView() {
               onChange={(e) => setNote(e.target.value)}
               placeholder="Any special instructions?"
               maxLength={500}
-              className="w-full px-4 py-3 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background border border-border"
+              className="nb-input w-full px-4 py-3 text-sm text-foreground placeholder-muted-foreground bg-background"
             />
           </div>
         </motion.div>
@@ -667,9 +685,10 @@ export function CheckoutView() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl p-5 bg-card"
+          className="nb-card-static bg-card p-5"
         >
-          <h2 className="text-base font-bold text-foreground mb-4">Payment Method</h2>
+          <h2 className="font-heading font-black text-foreground text-base mb-1">Payment Method</h2>
+          <div className="nb-accent-bar w-16 mb-4" />
 
           <div className="grid grid-cols-3 gap-3">
             {PAYMENT_OPTIONS.map((option) => {
@@ -685,16 +704,19 @@ export function CheckoutView() {
                   className="relative rounded-xl p-3 text-center transition-all duration-200"
                   style={{
                     backgroundColor: option.bgColor,
-                    border: isSelected ? `2px solid #FFD700` : `2px solid transparent`,
+                    border: isSelected ? `3px solid ${option.color}` : `3px solid var(--foreground)`,
+                    boxShadow: isSelected
+                      ? `4px 4px 0px ${option.color}`
+                      : `3px 3px 0px var(--foreground)`,
                   }}
                   aria-label={`Select ${option.label} payment`}
                 >
                   {isSelected && (
                     <div
-                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: '#FFD700' }}
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center border-2 border-foreground"
+                      style={{ backgroundColor: option.color }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </div>
@@ -722,8 +744,8 @@ export function CheckoutView() {
                       </svg>
                     )}
                   </div>
-                  <p className="text-xs font-bold" style={{ color: option.color }}>{option.label}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{option.labelBN}</p>
+                  <p className="text-xs font-black" style={{ color: option.color }}>{option.label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 font-bold">{option.labelBN}</p>
                 </button>
               )
             })}
@@ -735,51 +757,52 @@ export function CheckoutView() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-4 rounded-xl p-3 bg-amber-500/10 border border-amber-500/20"
+              className="mt-4 rounded-xl p-3 bg-[#FF8A5C]/10 border-[2.5px] border-[#FF8A5C]"
             >
-              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-                ⚠️ Cash on Delivery: ৳{paymentSettings.codDeliveryCharge} delivery charge will be added
+              <p className="text-sm text-[#FF8A5C] font-black">
+                Cash on Delivery: ৳{paymentSettings.codDeliveryCharge} delivery charge will be added
               </p>
             </motion.div>
           )}
 
-          {errors.paymentMethod && <p className="text-xs mt-2 text-[#f42a41]">{errors.paymentMethod}</p>}
+          {errors.paymentMethod && <p className="text-xs mt-2 text-[#EF4444] font-bold">{errors.paymentMethod}</p>}
         </motion.div>
 
-        {/* Transaction ID (only for bKash/Nagad) */}
+        {/* Transaction Details (only for bKash/Nagad) */}
         {(paymentMethod === 'bkash' || paymentMethod === 'nagad') && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="rounded-2xl p-5 bg-card"
+            className="nb-card-static bg-card p-5"
           >
-            <h2 className="text-base font-bold text-foreground mb-1">Transaction Details</h2>
+            <h2 className="font-heading font-black text-foreground text-base mb-1">Transaction Details</h2>
+            <div className="nb-accent-bar w-16 mb-2" />
             <p className="text-xs text-muted-foreground mb-4">
-              Send ৳{total.toLocaleString()} to {paymentMethod === 'bkash' ? 'bKash' : 'Nagad'} number and enter the transaction ID below
+              Send ৳{total.toLocaleString()} to {paymentMethod === 'bkash' ? 'bKash' : 'Nagad'} number and enter the details below
             </p>
 
             {/* Payment instructions */}
             <div
-              className="rounded-xl p-3 mb-4 text-xs space-y-1"
+              className="rounded-xl p-3 mb-4 text-xs space-y-1 border-[2.5px] border-foreground shadow-[2px_2px_0px_var(--foreground)]"
               style={{ backgroundColor: paymentMethod === 'bkash' ? 'rgba(226, 19, 110, 0.08)' : 'rgba(246, 146, 30, 0.08)' }}
             >
               <p className="text-foreground">
-                <span className="font-semibold">Step 1:</span> Open {paymentMethod === 'bkash' ? 'bKash' : 'Nagad'} app
+                <span className="font-black">Step 1:</span> Open {paymentMethod === 'bkash' ? 'bKash' : 'Nagad'} app
               </p>
               <p className="text-foreground">
-                <span className="font-semibold">Step 2:</span> Send Money to{' '}
-                <span className="font-mono font-bold inline-flex items-center gap-1.5" style={{ color: paymentMethod === 'bkash' ? '#E2136E' : '#F6921E' }}>
+                <span className="font-black">Step 2:</span> Send Money to{' '}
+                <span className="font-mono font-black inline-flex items-center gap-1.5" style={{ color: paymentMethod === 'bkash' ? '#E2136E' : '#F6921E' }}>
                   {agentNumber}
                   <button
                     type="button"
                     onClick={handleCopyNumber}
-                    className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-background/50 hover:bg-background/80 transition-colors"
+                    className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-background/50 hover:bg-background/80 transition-colors border border-foreground"
                     aria-label="Copy number"
                     title="Copy number"
                   >
                     {copied ? (
-                      <Check className="h-3.5 w-3.5 text-green-500" />
+                      <Check className="h-3.5 w-3.5 text-[#4ECDC4]" />
                     ) : (
                       <Copy className="h-3.5 w-3.5" style={{ color: paymentMethod === 'bkash' ? '#E2136E' : '#F6921E' }} />
                     )}
@@ -787,27 +810,63 @@ export function CheckoutView() {
                 </span>
               </p>
               <p className="text-foreground">
-                <span className="font-semibold">Step 3:</span> Enter the Transaction ID below
+                <span className="font-black">Step 3:</span> Enter the Transaction ID and details below
               </p>
             </div>
 
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Transaction ID <span className="text-[#f42a41]">*</span>
-            </label>
-            <input
-              type="text"
-              value={transactionId}
-              onChange={(e) => handleTransactionIdChange(e.target.value)}
-              placeholder="e.g. BKASH123456"
-              className={`w-full px-4 py-3 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors uppercase font-mono tracking-wider bg-background ${
-                errors.transactionId ? 'border border-[#f42a41]' : 'border border-border'
-              }`}
-              autoCapitalize="characters"
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <p className="text-xs text-muted-foreground mt-1">Only uppercase letters and numbers</p>
-            {errors.transactionId && <p className="text-xs mt-1 text-[#f42a41]">{errors.transactionId}</p>}
+            {/* Transaction ID */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-foreground mb-1.5">
+                Transaction ID <span className="text-[#f42a41]">*</span>
+              </label>
+              <input
+                type="text"
+                value={transactionId}
+                onChange={(e) => handleTransactionIdChange(e.target.value)}
+                placeholder="e.g. BKASH123456"
+                className={`nb-input w-full px-4 py-3 text-sm text-foreground placeholder-muted-foreground uppercase font-mono tracking-wider bg-background ${errors.transactionId ? 'border-[#EF4444] shadow-[3px_3px_0px_var(--foreground)]' : ''}`}
+                autoCapitalize="characters"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Only uppercase letters and numbers</p>
+              {errors.transactionId && <p className="text-xs mt-1 text-[#EF4444] font-bold">{errors.transactionId}</p>}
+            </div>
+
+            {/* Amount */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-foreground mb-1.5">
+                Amount (৳) <span className="text-[#f42a41]">*</span>
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={paymentAmount}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                placeholder={`৳${total.toLocaleString()}`}
+                className={`nb-input w-full px-4 py-3 text-sm text-foreground placeholder-muted-foreground bg-background font-mono ${errors.paymentAmount ? 'border-[#EF4444] shadow-[3px_3px_0px_var(--foreground)]' : ''}`}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Numbers only — enter the amount you sent</p>
+              {errors.paymentAmount && <p className="text-xs mt-1 text-[#EF4444] font-bold">{errors.paymentAmount}</p>}
+            </div>
+
+            {/* From Number */}
+            <div>
+              <label className="block text-sm font-bold text-foreground mb-1.5">
+                From Number <span className="text-[#f42a41]">*</span>
+              </label>
+              <input
+                type="text"
+                inputMode="tel"
+                value={fromNumber}
+                onChange={(e) => handleFromNumberChange(e.target.value)}
+                placeholder="01XXXXXXXXX"
+                maxLength={11}
+                className={`nb-input w-full px-4 py-3 text-sm text-foreground placeholder-muted-foreground bg-background font-mono ${errors.fromNumber ? 'border-[#EF4444] shadow-[3px_3px_0px_var(--foreground)]' : ''}`}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Numbers only — your bKash/Nagad number</p>
+              {errors.fromNumber && <p className="text-xs mt-1 text-[#EF4444] font-bold">{errors.fromNumber}</p>}
+            </div>
           </motion.div>
         )}
 
@@ -821,7 +880,7 @@ export function CheckoutView() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 rounded-xl font-bold text-base bg-[#FFD700] text-[#0A0A0A] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+            className="nb-btn w-full py-4 bg-[#FFD700] text-[#0A0A0A] font-black text-base uppercase disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

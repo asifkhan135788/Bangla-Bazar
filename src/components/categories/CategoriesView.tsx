@@ -131,7 +131,7 @@ export function CategoriesView() {
       >
         <button
           onClick={() => navigate('home')}
-          className="text-muted-foreground hover:text-[#FFD700] transition-colors"
+          className="text-muted-foreground hover:text-[#FF6B9D] font-bold transition-colors"
         >
           Home
         </button>
@@ -146,7 +146,7 @@ export function CategoriesView() {
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className="font-medium text-foreground">
+        <span className="font-bold text-foreground">
           {activeCategoryName || 'All Categories'}
         </span>
       </motion.nav>
@@ -155,10 +155,11 @@ export function CategoriesView() {
       <motion.h1
         initial={{ opacity: 0, y: -5 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-xl font-bold text-foreground mb-4"
+        className="font-heading font-black text-xl text-foreground mb-2"
       >
         All Categories
       </motion.h1>
+      <div className="nb-accent-bar w-16 mb-4" />
 
       {/* Categories grid */}
       {categoriesLoading ? (
@@ -166,11 +167,11 @@ export function CategoriesView() {
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="animate-pulse bg-card rounded-xl border border-border p-4 flex flex-col items-center"
+              className="animate-pulse bg-card rounded-xl border-[3px] border-foreground p-4 flex flex-col items-center shadow-[4px_4px_0px_var(--foreground)]"
             >
-              <div className="w-12 h-12 rounded-full bg-input mb-3" />
-              <div className="h-4 bg-input rounded w-2/3 mb-1" />
-              <div className="h-3 bg-input rounded w-1/2" />
+              <div className="w-14 h-14 rounded-full border-[3px] border-foreground bg-[#FFD700]/10 mb-3" />
+              <div className="h-4 bg-[#FFD700]/10 rounded w-2/3 mb-1" />
+              <div className="h-3 bg-[#FFD700]/10 rounded w-1/2" />
             </div>
           ))}
         </div>
@@ -187,19 +188,19 @@ export function CategoriesView() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.04 }}
-                whileHover={{ y: -2 }}
+                whileHover={{ rotate: -1 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => handleCategoryClick(category)}
-                className={`bg-card rounded-xl border-2 p-4 flex flex-col items-center text-center transition-all ${
+                className={`nb-card bg-card p-4 flex flex-col items-center text-center transition-all ${
                   isActive
-                    ? 'border-[#FFD700] shadow-lg shadow-[#FFD700]/10'
-                    : 'border-border hover:border-[#FFD700]/40 hover:shadow-md'
+                    ? 'shadow-[6px_6px_0px_var(--foreground)] translate-x-[-1px] translate-y-[-1px] border-[#FFD700]'
+                    : ''
                 }`}
                 aria-pressed={isActive}
               >
-                {/* Icon/image - yellow circle for active */}
+                {/* Icon/image - yellow circle with NB styling */}
                 <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center mb-3 text-2xl"
+                  className="w-14 h-14 rounded-full flex items-center justify-center mb-3 text-2xl border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)]"
                   style={{
                     backgroundColor: isActive
                       ? '#FFD700'
@@ -220,7 +221,7 @@ export function CategoriesView() {
 
                 {/* Name */}
                 <h3
-                  className="text-sm font-semibold leading-tight"
+                  className="text-sm font-bold leading-tight"
                   style={{ color: isActive ? '#FFD700' : 'hsl(var(--foreground))' }}
                 >
                   {category.name}
@@ -232,7 +233,7 @@ export function CategoriesView() {
                 )}
 
                 {/* Product count */}
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 font-bold">
                   {productCount} product{productCount !== 1 ? 's' : ''}
                 </p>
               </motion.button>
@@ -252,7 +253,7 @@ export function CategoriesView() {
             transition={{ duration: 0.3 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-foreground">
+              <h2 className="font-heading font-black text-lg text-foreground">
                 {activeCategoryName}
               </h2>
               <button
@@ -261,7 +262,7 @@ export function CategoriesView() {
                   setActiveCategoryName('')
                   setProducts([])
                 }}
-                className="text-sm font-medium text-[#FFD700] hover:text-[#FFE44D] transition-colors"
+                className="nb-btn-sm bg-transparent text-[#FF6B9D] border-[2.5px] border-[#FF6B9D] px-3 py-1.5 text-sm"
               >
                 Clear
               </button>
@@ -272,14 +273,14 @@ export function CategoriesView() {
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div
                     key={i}
-                    className="bg-card rounded-xl border border-border overflow-hidden animate-pulse"
+                    className="bg-card rounded-xl border-[3px] border-foreground overflow-hidden animate-pulse shadow-[4px_4px_0px_var(--foreground)]"
                   >
-                    <div className="aspect-square bg-input" />
+                    <div className="aspect-square bg-[#FFD700]/10" />
                     <div className="p-3 space-y-2">
-                      <div className="h-4 bg-input rounded w-3/4" />
-                      <div className="h-3 bg-input rounded w-1/2" />
-                      <div className="h-5 bg-input rounded w-2/3" />
-                      <div className="h-9 bg-input rounded" />
+                      <div className="h-4 bg-[#FFD700]/10 rounded w-3/4" />
+                      <div className="h-3 bg-[#FFD700]/10 rounded w-1/2" />
+                      <div className="h-5 bg-[#FFD700]/10 rounded w-2/3" />
+                      <div className="h-9 bg-[#FFD700]/10 rounded" />
                     </div>
                   </div>
                 ))}
@@ -309,8 +310,8 @@ export function CategoriesView() {
                   height="48"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#555"
-                  strokeWidth="1.5"
+                  stroke="#FFD700"
+                  strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   className="mx-auto mb-3"
@@ -318,7 +319,7 @@ export function CategoriesView() {
                   <circle cx="11" cy="11" r="8" />
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground font-bold">
                   No products found in this category
                 </p>
               </div>

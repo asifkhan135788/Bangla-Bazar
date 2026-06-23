@@ -244,7 +244,7 @@ export function SearchView() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-14 z-10 bg-background border-b border-border px-4 py-3"
+        className="sticky top-14 z-10 bg-background border-b-[3px] border-foreground shadow-[0_3px_0_0_var(--foreground)] px-4 py-3"
       >
         <div className="max-w-7xl mx-auto">
           {/* Search input */}
@@ -269,7 +269,7 @@ export function SearchView() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('searchProducts')}
-              className="w-full pl-10 pr-10 py-3 rounded-xl bg-card text-foreground placeholder-muted-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700] transition-all"
+              className="nb-input w-full pl-10 pr-10 py-3 text-sm bg-card"
               aria-label="Search products"
             />
             {query && (
@@ -307,7 +307,7 @@ export function SearchView() {
                 <button
                   key={term}
                   onClick={() => handleRecentSearchClick(term)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-[#FFD700]/15 text-[#FFD700] border border-[#FFD700]/25 hover:bg-[#FFD700]/25 hover:border-[#FFD700]/40 transition-all cursor-pointer"
+                  className="nb-chip bg-[#FFD700]/15 text-[#FFD700] border-[#FFD700] cursor-pointer hover:bg-[#FFD700]/25 transition-colors"
                 >
                   <svg
                     width="12"
@@ -328,7 +328,7 @@ export function SearchView() {
               ))}
               <button
                 onClick={handleClearRecentSearches}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
+                className="text-xs text-[#FF6B9D] font-bold hover:underline ml-1"
                 aria-label="Clear recent searches"
               >
                 {t('clear')}
@@ -339,7 +339,7 @@ export function SearchView() {
           {/* Filter toggle */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="mt-2 flex items-center gap-1.5 text-sm font-medium text-[#FFD700]"
+            className="mt-2 flex items-center gap-1.5 text-sm font-bold text-[#FF6B9D]"
           >
             <svg
               width="16"
@@ -364,14 +364,14 @@ export function SearchView() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden bg-card border-b border-border"
+            className="overflow-hidden bg-card border-b-[3px] border-foreground"
           >
             <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap gap-3">
               {/* Category dropdown */}
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-border text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30"
+                className="nb-input px-3 py-2 text-sm bg-background"
                 aria-label="Filter by category"
               >
                 <option value="">{t('allCategories')}</option>
@@ -390,21 +390,21 @@ export function SearchView() {
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
                   placeholder={`${t('min')} ৳`}
-                  className="w-24 px-3 py-2 rounded-lg border border-border text-sm bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30"
+                  className="nb-input w-24 px-3 py-2 text-sm bg-background"
                   aria-label="Minimum price"
                 />
-                <span className="text-muted-foreground text-sm">—</span>
+                <span className="text-muted-foreground text-sm font-bold">—</span>
                 <input
                   type="number"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
                   placeholder={`${t('max_price')} ৳`}
-                  className="w-24 px-3 py-2 rounded-lg border border-border text-sm bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30"
+                  className="nb-input w-24 px-3 py-2 text-sm bg-background"
                   aria-label="Maximum price"
                 />
                 <button
                   onClick={handleApplyPriceFilter}
-                  className="px-3 py-2 rounded-lg text-sm font-medium bg-[#FFD700] text-[#0A0A0A]"
+                  className="nb-btn-sm bg-[#FFD700] text-[#0A0A0A] px-3 py-2 text-sm"
                 >
                   {t('go')}
                 </button>
@@ -414,7 +414,7 @@ export function SearchView() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-border text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30"
+                className="nb-input px-3 py-2 text-sm bg-background"
                 aria-label="Sort by"
               >
                 {SORT_OPTIONS.map((opt) => (
@@ -432,7 +432,7 @@ export function SearchView() {
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Result count */}
         {searched && !loading && (
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-muted-foreground mb-4 font-bold">
             {total > 0
               ? `${total} ${t('productsFound')}`
               : t('noProductsFound')}
@@ -445,14 +445,14 @@ export function SearchView() {
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-card rounded-xl border border-border overflow-hidden animate-pulse"
+                className="bg-card rounded-xl border-[3px] border-foreground overflow-hidden animate-pulse shadow-[4px_4px_0px_var(--foreground)]"
               >
-                <div className="aspect-square bg-input" />
+                <div className="aspect-square bg-[#FFD700]/10" />
                 <div className="p-3 space-y-2">
-                  <div className="h-4 bg-input rounded w-3/4" />
-                  <div className="h-3 bg-input rounded w-1/2" />
-                  <div className="h-5 bg-input rounded w-2/3" />
-                  <div className="h-9 bg-input rounded" />
+                  <div className="h-4 bg-[#FFD700]/10 rounded w-3/4" />
+                  <div className="h-3 bg-[#FFD700]/10 rounded w-1/2" />
+                  <div className="h-5 bg-[#FFD700]/10 rounded w-2/3" />
+                  <div className="h-9 bg-[#FFD700]/10 rounded" />
                 </div>
               </div>
             ))}
@@ -492,7 +492,7 @@ export function SearchView() {
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-16"
           >
-            <div className="w-24 h-24 mb-6 flex items-center justify-center rounded-full bg-card border border-border">
+            <div className="w-24 h-24 mb-6 flex items-center justify-center rounded-full bg-card border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]">
               <svg
                 width="48"
                 height="48"
@@ -507,7 +507,7 @@ export function SearchView() {
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
+            <h3 className="text-lg font-bold text-foreground mb-2">
               {t('noProductsFound')}
             </h3>
             <p className="text-sm text-muted-foreground text-center max-w-xs mb-6">
@@ -515,7 +515,7 @@ export function SearchView() {
             </p>
             <button
               onClick={() => navigate('home')}
-              className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D]"
+              className="nb-btn bg-[#FFD700] text-[#0A0A0A] px-6 py-2.5 text-sm"
             >
               {t('browseProducts')}
             </button>

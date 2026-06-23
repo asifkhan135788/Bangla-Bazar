@@ -24,7 +24,7 @@ function CategoryIcon({ icon, name }: { icon?: string; name: string }) {
   // If category has a custom icon URL, render it
   if (icon) {
     return (
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FFD700] text-[#0A0A0A]">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)] bg-[#FFD700] text-[#0A0A0A]">
         <img
           src={icon}
           alt={name}
@@ -47,7 +47,7 @@ function CategoryIcon({ icon, name }: { icon?: string; name: string }) {
 
   // Default: yellow circle with black letter
   return (
-    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FFD700] text-[#0A0A0A]">
+    <div className="flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)] bg-[#FFD700] text-[#0A0A0A]">
       <span className="text-xl font-bold">{initial}</span>
     </div>
   )
@@ -93,10 +93,10 @@ export default function CategoryGrid() {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+          <h2 className="font-heading font-black text-2xl sm:text-3xl text-foreground">
             Shop by Category
           </h2>
-          <div className="mt-2 h-1 w-16 rounded-full bg-[#FFD700]" />
+          <div className="nb-accent-bar mt-3 w-16" />
         </motion.div>
 
         {/* Loading Skeleton */}
@@ -114,7 +114,7 @@ export default function CategoryGrid() {
             <p className="text-muted-foreground mb-3">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="text-sm text-[#FFD700] font-medium hover:underline"
+              className="text-[#FF6B9D] font-bold text-sm hover:underline"
             >
               Try again
             </button>
@@ -135,13 +135,13 @@ export default function CategoryGrid() {
                   delay: index * 0.06,
                   ease: 'easeOut',
                 }}
-                whileHover={{ scale: 1.03 }}
+                whileHover={{ rotate: -1 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => handleCategoryClick(category)}
-                className="flex flex-col items-center justify-center rounded-xl bg-card p-6 border border-border hover:border-[#FFD700]/40 hover:shadow-lg hover:shadow-[#FFD700]/5 transition-all cursor-pointer"
+                className="nb-card bg-card p-6 flex flex-col items-center justify-center cursor-pointer"
               >
                 <CategoryIcon icon={category.icon} name={category.name} />
-                <h3 className="mt-3 text-sm font-semibold text-foreground">
+                <h3 className="mt-3 text-sm font-bold text-foreground">
                   {category.name}
                 </h3>
                 {category.nameBN && (

@@ -37,13 +37,13 @@ interface Order {
   orderItems: { id: string }[]
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  pending: { bg: 'rgba(255, 215, 0, 0.15)', text: '#FFD700' },
-  confirmed: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' },
-  processing: { bg: 'rgba(139, 92, 246, 0.15)', text: '#8b5cf6' },
-  shipped: { bg: 'rgba(6, 182, 212, 0.15)', text: '#06b6d4' },
-  delivered: { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e' },
-  cancelled: { bg: 'rgba(244, 42, 65, 0.15)', text: '#f42a41' },
+const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  pending: { bg: '#FFD700', text: '#1A1A1A', border: '#1A1A1A' },
+  confirmed: { bg: '#4ECDC4', text: '#1A1A1A', border: '#1A1A1A' },
+  processing: { bg: '#A855F7', text: '#FFFFFF', border: '#1A1A1A' },
+  shipped: { bg: '#06b6d4', text: '#FFFFFF', border: '#1A1A1A' },
+  delivered: { bg: '#22c55e', text: '#FFFFFF', border: '#1A1A1A' },
+  cancelled: { bg: '#EF4444', text: '#FFFFFF', border: '#1A1A1A' },
 }
 
 export function ProfileView() {
@@ -98,16 +98,13 @@ export function ProfileView() {
         className="py-6 bg-background"
       >
         <div className="text-center mb-6 px-4">
-          <div
-            className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(255, 215, 0, 0.1)' }}
-          >
-            <User className="h-9 w-9 text-[#FFD700]" />
+          <div className="w-20 h-20 rounded-xl mx-auto mb-4 flex items-center justify-center bg-[#FF6B9D] border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]">
+            <User className="h-9 w-9 text-white" />
           </div>
-          <h2 className="text-lg font-bold text-foreground">
+          <h2 className="text-lg font-black text-foreground uppercase tracking-wide">
             {t('signInToAccount')}
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1 font-semibold">
             {t('accessOrdersProfile')}
           </p>
         </div>
@@ -293,7 +290,7 @@ export function ProfileView() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-card rounded-2xl border border-border p-5 mb-4"
+        className="nb-card bg-card p-5 mb-4"
       >
         <div className="flex items-center gap-4">
           {/* Avatar with upload */}
@@ -302,10 +299,10 @@ export function ProfileView() {
               <img
                 src={user.avatar}
                 alt={user.name || 'Profile'}
-                className="w-16 h-16 rounded-full object-cover border-2 border-[#FFD700]"
+                className="w-16 h-16 rounded-full object-cover border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)]"
               />
             ) : (
-              <div className="w-16 h-16 rounded-full flex items-center justify-center text-[#0A0A0A] text-2xl font-bold border-2 border-[#FFD700] bg-[#FFD700]">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center text-[#0A0A0A] text-2xl font-black border-[3px] border-foreground bg-[#FFD700] shadow-[3px_3px_0px_var(--foreground)]">
                 {userInitial}
               </div>
             )}
@@ -314,7 +311,7 @@ export function ProfileView() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={avatarUploading}
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#FFD700] flex items-center justify-center text-[#0A0A0A] shadow-md hover:bg-[#FFE44D] transition-colors disabled:opacity-50"
+              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#FFD700] border-2 border-foreground flex items-center justify-center text-[#0A0A0A] shadow-[2px_2px_0px_var(--foreground)] hover:brightness-110 transition disabled:opacity-50"
               aria-label="Change profile picture"
             >
               {avatarUploading ? (
@@ -329,7 +326,7 @@ export function ProfileView() {
               <button
                 onClick={handleAvatarDelete}
                 disabled={avatarUploading}
-                className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white shadow-md hover:bg-red-600 transition-colors disabled:opacity-50"
+                className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#EF4444] border-2 border-foreground flex items-center justify-center text-white shadow-[2px_2px_0px_var(--foreground)] hover:brightness-110 transition disabled:opacity-50"
                 aria-label="Remove profile picture"
               >
                 <X className="h-3 w-3" />
@@ -356,49 +353,49 @@ export function ProfileView() {
                 className="flex-1 space-y-2"
               >
                 <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  <label className="block text-xs font-bold text-foreground mb-1">
                     {t('name')}
                   </label>
                   <input
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700]"
+                    className="nb-input w-full px-3 py-2 text-sm bg-background"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  <label className="block text-xs font-bold text-foreground mb-1">
                     {t('phone')}
                   </label>
                   <input
                     type="tel"
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700]"
+                    className="nb-input w-full px-3 py-2 text-sm bg-background"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  <label className="block text-xs font-bold text-foreground mb-1">
                     {t('address')}
                   </label>
                   <input
                     type="text"
                     value={editAddress}
                     onChange={(e) => setEditAddress(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700]"
+                    className="nb-input w-full px-3 py-2 text-sm bg-background"
                   />
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={handleSaveEdit}
                     disabled={editLoading}
-                    className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 bg-[#FFD700] text-[#0A0A0A]"
+                    className="nb-btn-sm bg-[#FFD700] text-[#0A0A0A] px-4 py-2 text-sm font-black uppercase disabled:opacity-50"
                   >
                     {editLoading ? t('saving') : t('save')}
                   </button>
                   <button
                     onClick={() => setEditing(false)}
-                    className="px-4 py-2 rounded-lg text-muted-foreground text-sm font-medium bg-input hover:bg-input/80 transition-colors"
+                    className="nb-btn-sm px-4 py-2 text-sm font-bold text-foreground bg-input/50"
                   >
                     {t('cancel')}
                   </button>
@@ -413,23 +410,23 @@ export function ProfileView() {
                 className="flex-1 min-w-0"
               >
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-foreground truncate">
+                  <h2 className="text-lg font-black text-foreground truncate">
                     {user.name || 'User'}
                   </h2>
                   <button
                     onClick={handleStartEdit}
-                    className="p-1 rounded-md hover:bg-[#FFD700]/10 transition-colors"
+                    className="p-1.5 rounded-md border-2 border-foreground bg-[#4ECDC4]/20 hover:bg-[#4ECDC4]/40 transition-colors shadow-[2px_2px_0px_var(--foreground)]"
                     aria-label={t('editProfile')}
                   >
-                    <Pencil className="h-3.5 w-3.5 text-[#FFD700]" />
+                    <Pencil className="h-3.5 w-3.5 text-[#4ECDC4]" />
                   </button>
                 </div>
-                <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                <p className="text-sm text-muted-foreground truncate font-semibold">{user.email}</p>
                 {user.phone && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{user.phone}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 font-semibold">{user.phone}</p>
                 )}
                 {user.address && (
-                  <p className="text-xs text-muted-foreground truncate">{user.address}</p>
+                  <p className="text-xs text-muted-foreground truncate font-semibold">{user.address}</p>
                 )}
               </motion.div>
             )}
@@ -442,14 +439,14 @@ export function ProfileView() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="bg-card rounded-2xl border border-border p-5 mb-4"
+        className="nb-card bg-card p-5 mb-4"
       >
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-foreground">{t('orderHistory')}</h3>
+          <h3 className="text-sm font-black text-foreground uppercase tracking-wide">{t('orderHistory')}</h3>
           {orders.length > 0 && (
             <button
               onClick={() => navigate('orders')}
-              className="text-xs text-[#FFD700] font-medium"
+              className="text-xs text-[#FF6B9D] font-bold hover:underline"
             >
               {t('viewAll')}
             </button>
@@ -459,7 +456,7 @@ export function ProfileView() {
         {ordersLoading ? (
           <div className="space-y-2">
             {[1, 2].map((i) => (
-              <div key={i} className="animate-pulse p-3 rounded-xl border border-border">
+              <div key={i} className="animate-pulse p-3 rounded-xl border-[2px] border-foreground/30">
                 <div className="flex justify-between">
                   <div className="h-4 bg-input rounded w-1/3" />
                   <div className="h-5 bg-input rounded w-16" />
@@ -468,7 +465,7 @@ export function ProfileView() {
             ))}
           </div>
         ) : orders.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">{t('noOrders')}</p>
+          <p className="text-sm text-muted-foreground text-center py-4 font-semibold">{t('noOrders')}</p>
         ) : (
           <div className="space-y-2">
             {orders.slice(0, 3).map((order) => {
@@ -476,22 +473,22 @@ export function ProfileView() {
               return (
                 <div
                   key={order.id}
-                  className="p-3 rounded-xl border border-border flex items-center justify-between"
+                  className="p-3 rounded-xl border-[2px] border-foreground flex items-center justify-between"
                 >
                   <div>
-                    <p className="text-xs font-mono text-muted-foreground">
+                    <p className="text-xs font-mono text-muted-foreground font-bold">
                       #{order.id.slice(-8).toUpperCase()}
                     </p>
-                    <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
+                    <p className="text-xs text-muted-foreground font-semibold">{formatDate(order.createdAt)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span
-                      className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                      style={{ backgroundColor: statusStyle.bg, color: statusStyle.text }}
+                      className="nb-chip"
+                      style={{ backgroundColor: statusStyle.bg, color: statusStyle.text, borderColor: statusStyle.border }}
                     >
                       {statusLabel(order.status)}
                     </span>
-                    <span className="text-sm font-bold text-[#FFD700]">
+                    <span className="text-sm font-black text-[#FFD700]">
                       ৳{order.total.toLocaleString()}
                     </span>
                   </div>
@@ -507,41 +504,43 @@ export function ProfileView() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-card rounded-2xl border border-border overflow-hidden mb-4"
+        className="nb-card-static bg-card overflow-hidden mb-4"
       >
-        <div className="px-5 py-3 border-b border-border">
-          <h3 className="text-sm font-bold text-foreground">{t('appSettings')}</h3>
+        <div className="px-5 py-3 border-b-[3px] border-foreground">
+          <h3 className="text-sm font-black text-foreground uppercase tracking-wide">{t('appSettings')}</h3>
         </div>
         <div>
           {settingsItems.map((item, idx) => (
             <button
               key={idx}
               onClick={item.onClick}
-              className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[#FFD700]/5 transition-colors text-left border-b border-border last:border-b-0"
+              className={`w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[#FFD700]/5 transition-colors text-left ${
+                idx < settingsItems.length - 1 ? 'border-b-[2px] border-foreground/20' : ''
+              }`}
             >
-              <span className="text-[#FFD700] shrink-0">{item.icon}</span>
+              <span className="text-[#FF6B9D] shrink-0">{item.icon}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">{item.label}</p>
+                <p className="text-sm font-bold text-foreground">{item.label}</p>
                 {item.subtitle && (
-                  <p className="text-xs text-muted-foreground">{item.subtitle}</p>
+                  <p className="text-xs text-muted-foreground font-semibold">{item.subtitle}</p>
                 )}
               </div>
               {item.toggle ? (
                 <div
-                  className="relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0"
+                  className="relative w-11 h-6 rounded-xl transition-colors duration-200 shrink-0 border-2 border-foreground shadow-[2px_2px_0px_var(--foreground)]"
                   style={{
                     backgroundColor: item.toggleValue ? '#FFD700' : isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
                   }}
                 >
                   <span
-                    className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200"
+                    className="absolute top-0.5 w-4 h-4 rounded-md bg-white border-2 border-foreground shadow-[1px_1px_0px_var(--foreground)] transition-all duration-200"
                     style={{
-                      left: item.toggleValue ? 'calc(100% - 22px)' : '2px',
+                      left: item.toggleValue ? 'calc(100% - 20px)' : '3px',
                     }}
                   />
                 </div>
               ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                <ChevronRight className="h-4 w-4 text-foreground shrink-0 font-bold" />
               )}
             </button>
           ))}
@@ -556,7 +555,7 @@ export function ProfileView() {
       >
         <button
           onClick={handleLogout}
-          className="w-full py-3 rounded-xl border-2 text-sm font-semibold transition-colors hover:bg-red-500/10 border-[#f42a41] text-[#f42a41] flex items-center justify-center gap-2"
+          className="nb-btn w-full py-3 border-[#EF4444] text-[#EF4444] hover:bg-[#EF4444]/10 flex items-center justify-center gap-2 font-black uppercase"
         >
           <LogOut className="h-4 w-4" />
           {t('logout')}
@@ -564,7 +563,7 @@ export function ProfileView() {
       </motion.div>
 
       {/* App version */}
-      <p className="text-center text-[10px] text-muted-foreground mt-4">
+      <p className="text-center text-[10px] text-muted-foreground mt-4 font-semibold">
         {t('appName')} • {t('version')} 1.0.0
       </p>
     </div>

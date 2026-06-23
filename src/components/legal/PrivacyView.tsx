@@ -94,18 +94,19 @@ export function PrivacyView() {
       className="min-h-screen bg-background"
     >
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-md border-b border-border">
+      <div className="sticky top-0 z-10 bg-card border-b-[3px] border-foreground">
         <div className="flex items-center gap-3 px-4 py-3">
           <button
             onClick={goBack}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#FFD700]/10 transition-colors"
+            className="nb-btn-sm bg-card text-foreground flex items-center justify-center gap-1.5 px-3 py-1.5"
             aria-label="Go back"
           >
-            <ArrowLeft className="h-5 w-5 text-foreground" />
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-xs">Back</span>
           </button>
           <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-[#FFD700]" />
-            <h1 className="text-lg font-bold text-foreground">Privacy Policy</h1>
+            <Shield className="h-5 w-5 text-[#4ECDC4]" />
+            <h1 className="text-lg font-heading font-black text-foreground">Privacy Policy</h1>
           </div>
         </div>
       </div>
@@ -118,13 +119,13 @@ export function PrivacyView() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="mb-8"
+            className="nb-card-static bg-[#4ECDC4]/10 border-[#4ECDC4] p-5 mb-6"
           >
-            <div className="h-1 w-16 rounded-full bg-[#FFD700] mb-4" />
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <div className="nb-accent-bar w-16 mb-4" style={{ background: '#4ECDC4' }} />
+            <p className="text-sm text-muted-foreground font-medium leading-relaxed">
               Last updated: January 2025
             </p>
-            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+            <p className="text-sm text-muted-foreground font-medium leading-relaxed mt-2">
               At Bangla Bazar, we are committed to protecting your privacy. This Privacy Policy
               explains how we collect, use, disclose, and safeguard your information when you
               use our e-commerce platform serving customers across Bangladesh.
@@ -132,20 +133,21 @@ export function PrivacyView() {
           </motion.div>
 
           {/* Sections */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {sections.map((section, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 + index * 0.05 }}
-                className="bg-card rounded-2xl border border-border p-5"
+                className="nb-card-static bg-card p-5 mb-4"
               >
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3 mb-1">
                   <span className="text-xl">{section.icon}</span>
-                  <h2 className="text-base font-bold text-foreground">{section.title}</h2>
+                  <h2 className="text-base font-heading font-black text-foreground">{section.title}</h2>
                 </div>
-                <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                <div className="nb-accent-bar w-10 mb-3" style={{ background: '#4ECDC4' }} />
+                <div className="text-sm text-muted-foreground font-medium leading-relaxed whitespace-pre-line">
                   {section.content}
                 </div>
               </motion.div>
@@ -159,8 +161,8 @@ export function PrivacyView() {
             transition={{ delay: 0.5 }}
             className="mt-8 mb-6 text-center"
           >
-            <div className="h-px w-32 mx-auto bg-border mb-4" />
-            <p className="text-xs text-muted-foreground">
+            <div className="nb-divider w-32 mx-auto mb-4" />
+            <p className="text-xs text-muted-foreground font-medium">
               © 2025 Bangla Bazar Ltd. All rights reserved.
             </p>
           </motion.div>

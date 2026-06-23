@@ -61,7 +61,7 @@ function normalizeProduct(raw: ProductApi): Product {
 }
 
 function StarRating({ rating, size = 'md' }: { rating: number; size?: 'sm' | 'md' | 'lg' }) {
-  const sizeClass = size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5'
+  const sizeClass = size === 'sm' ? 'h-5 w-5' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5'
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((star) => (
@@ -135,10 +135,10 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
   const getStockLabel = () => {
     if (!product) return null
     if (product.stock === 0)
-      return <span className="text-sm font-medium text-red-500">{t('outOfStock')}</span>
+      return <span className="text-sm font-bold text-red-500">{t('outOfStock')}</span>
     if (product.stock <= 5)
-      return <span className="text-sm font-medium text-[#FFD700]">{`${t('lowStock')} (${product.stock} ${t('left')})`}</span>
-    return <span className="text-sm font-medium text-green-500">{t('inStock')}</span>
+      return <span className="text-sm font-bold text-[#FFD700]">{`${t('lowStock')} (${product.stock} ${t('left')})`}</span>
+    return <span className="text-sm font-bold text-green-500">{t('inStock')}</span>
   }
 
   const handleAddToCart = useCallback(() => {
@@ -191,12 +191,12 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
     return (
       <div className="min-h-screen bg-background p-4">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 w-24 rounded bg-input" />
-          <div className="aspect-square w-full rounded-xl bg-input" />
-          <div className="h-6 w-3/4 rounded bg-input" />
-          <div className="h-4 w-1/2 rounded bg-input" />
-          <div className="h-8 w-32 rounded bg-input" />
-          <div className="h-20 w-full rounded bg-input" />
+          <div className="h-8 w-24 rounded-xl bg-[#FFD700]/10 border-[3px] border-foreground" />
+          <div className="aspect-square w-full rounded-xl bg-[#FFD700]/10 border-[3px] border-foreground" />
+          <div className="h-6 w-3/4 rounded bg-[#FFD700]/10" />
+          <div className="h-4 w-1/2 rounded bg-[#FFD700]/10" />
+          <div className="h-8 w-32 rounded bg-[#FFD700]/10" />
+          <div className="h-20 w-full rounded bg-[#FFD700]/10" />
         </div>
       </div>
     )
@@ -209,7 +209,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
         <p className="text-lg text-muted-foreground mb-4">{error || 'Product not found'}</p>
         <button
           onClick={goBack}
-          className="flex items-center gap-2 rounded-lg bg-[#FFD700] px-4 py-2 text-[#0A0A0A] hover:bg-[#FFE44D] font-semibold"
+          className="nb-btn-sm bg-[#FFD700] text-[#0A0A0A] flex items-center gap-2 px-4 py-2"
         >
           <ArrowLeft className="h-4 w-4" />
           {t('goBack')}
@@ -226,10 +226,10 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
       className="min-h-screen bg-background"
     >
       {/* Back Button */}
-      <div className="sticky top-0 z-10 flex items-center bg-background/90 backdrop-blur-sm px-4 py-3 border-b border-border">
+      <div className="sticky top-0 z-10 flex items-center bg-background px-4 py-3 border-b-[3px] border-foreground shadow-[0_3px_0_0_var(--foreground)]">
         <button
           onClick={goBack}
-          className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-[#FFD700] transition-colors"
+          className="nb-btn-sm bg-card text-foreground flex items-center gap-1 px-3 py-1.5 text-sm"
         >
           <ArrowLeft className="h-5 w-5" />
           {t('back')}
@@ -238,7 +238,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
 
       <div className="p-4 space-y-6 max-w-3xl mx-auto">
         {/* Image Carousel */}
-        <div className="relative rounded-xl overflow-hidden bg-card aspect-square">
+        <div className="nb-card-static relative overflow-hidden bg-card aspect-square border-[3px] border-foreground">
           <AnimatePresence mode="wait">
             <motion.img
               key={currentImageIndex}
@@ -260,13 +260,13 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
             <>
               <button
                 onClick={handlePrevImage}
-                className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card/80 shadow-md hover:bg-card transition-colors border border-border"
+                className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card border-[3px] border-foreground shadow-[2px_2px_0px_var(--foreground)] hover:shadow-[3px_3px_0px_var(--foreground)] hover:translate-x-[-1px] hover:translate-y-[-50%] active:shadow-[0px_0px_0px_var(--foreground)] active:translate-x-[2px] transition-all"
               >
                 <ChevronLeft className="h-5 w-5 text-foreground" />
               </button>
               <button
                 onClick={handleNextImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card/80 shadow-md hover:bg-card transition-colors border border-border"
+                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-card border-[3px] border-foreground shadow-[2px_2px_0px_var(--foreground)] hover:shadow-[3px_3px_0px_var(--foreground)] hover:translate-x-[-1px] hover:translate-y-[-50%] active:shadow-[0px_0px_0px_var(--foreground)] active:translate-x-[2px] transition-all"
               >
                 <ChevronRight className="h-5 w-5 text-foreground" />
               </button>
@@ -275,7 +275,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
 
           {/* Sale Badge */}
           {product.salePrice && discountPercent > 0 && (
-            <div className="absolute top-3 left-3 rounded-lg bg-[#FFD700] px-3 py-1 text-sm font-bold text-[#0A0A0A]">
+            <div className="nb-sticker absolute top-3 left-3 bg-[#FF6B9D] text-white -rotate-3">
               -{discountPercent}% OFF
             </div>
           )}
@@ -287,10 +287,10 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
                 <button
                   key={i}
                   onClick={() => setCurrentImageIndex(i)}
-                  className={`h-2 rounded-full transition-all ${
+                  className={`rounded-full transition-all ${
                     i === currentImageIndex
-                      ? 'w-5 bg-[#FFD700]'
-                      : 'w-2 bg-foreground/40 hover:bg-foreground/60'
+                      ? 'h-3 w-5 bg-[#FF6B9D]'
+                      : 'h-2.5 w-2.5 bg-foreground/40 hover:bg-foreground/60'
                   }`}
                 />
               ))}
@@ -300,7 +300,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
 
         {/* Product Info */}
         <div className="space-y-3">
-          <h1 className="text-xl font-bold text-foreground leading-tight">
+          <h1 className="font-heading font-black text-xl text-foreground leading-tight">
             {product.name}
           </h1>
           {product.nameBN && (
@@ -313,13 +313,13 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
               {product.rating > 0 && (
                 <div className="flex items-center gap-2">
                   <StarRating rating={product.rating} size="sm" />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-muted-foreground font-bold">
                     {product.rating.toFixed(1)} ({product.reviewCount ?? 0} {t('reviews')})
                   </span>
                 </div>
               )}
               {product.buyCount > 0 && (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground font-bold">
                   {product.buyCount >= 1000
                     ? `${(product.buyCount / 1000).toFixed(1)}k`
                     : product.buyCount}{' '}
@@ -333,7 +333,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
           <div className="flex items-baseline gap-3 pt-1">
             {product.salePrice ? (
               <>
-                <span className="text-2xl font-bold text-[#FFD700]">
+                <span className="font-black text-[#FFD700] text-2xl">
                   ৳{product.salePrice.toLocaleString()}
                 </span>
                 <span className="text-lg text-muted-foreground line-through">
@@ -341,7 +341,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
                 </span>
               </>
             ) : (
-              <span className="text-2xl font-bold text-[#FFD700]">
+              <span className="font-black text-[#FFD700] text-2xl">
                 ৳{product.price.toLocaleString()}
               </span>
             )}
@@ -350,7 +350,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
           {/* Stock Indicator */}
           <div className="flex items-center gap-2">
             <div
-              className={`h-2.5 w-2.5 rounded-full ${
+              className={`h-2.5 w-2.5 rounded-full border-2 border-foreground ${
                 !inStock
                   ? 'bg-red-500'
                   : isLowStock
@@ -364,8 +364,8 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
 
         {/* Description */}
         {(product.description || product.descriptionBN) && (
-          <div className="border-t border-border pt-4 space-y-2">
-            <h3 className="text-sm font-semibold text-foreground">
+          <div className="border-t-[3px] border-foreground pt-4 space-y-2">
+            <h3 className="text-sm font-bold text-foreground">
               {t('description')}
             </h3>
             {product.description && (
@@ -383,29 +383,29 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
 
         {/* Quantity Selector */}
         {inStock && (
-          <div className="border-t border-border pt-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3">
+          <div className="border-t-[3px] border-foreground pt-4">
+            <h3 className="text-sm font-bold text-foreground mb-3">
               {t('quantity')}
             </h3>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 disabled={quantity <= 1}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="nb-btn-sm flex h-10 w-10 items-center justify-center border-[2.5px] border-foreground text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Minus className="h-4 w-4" />
               </button>
-              <span className="w-12 text-center text-lg font-semibold text-foreground">
+              <span className="w-12 text-center text-lg font-bold text-foreground">
                 {quantity}
               </span>
               <button
                 onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
                 disabled={quantity >= product.stock}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-card disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="nb-btn-sm flex h-10 w-10 items-center justify-center border-[2.5px] border-foreground text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Plus className="h-4 w-4" />
               </button>
-              <span className="text-xs text-muted-foreground ml-1">
+              <span className="text-xs text-muted-foreground ml-1 font-bold">
                 ({t('max')}: {product.stock})
               </span>
             </div>
@@ -413,12 +413,12 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
         )}
 
         {/* Action Buttons */}
-        <div className="sticky bottom-0 bg-background border-t border-border pt-4 pb-6 -mx-4 px-4 space-y-3">
+        <div className="sticky bottom-0 bg-background border-t-[3px] border-foreground pt-4 pb-6 -mx-4 px-4 space-y-3">
           {inStock ? (
             <>
               <button
                 onClick={handleAddToCart}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FFD700] py-3.5 text-base font-semibold text-[#0A0A0A] transition-colors hover:bg-[#FFE44D] active:bg-[#E6C200]"
+                className="nb-btn w-full bg-[#FFD700] text-[#0A0A0A] uppercase flex items-center justify-center gap-2 py-3.5 text-base"
               >
                 <ShoppingCart className="h-5 w-5" />
                 {t('addToCart')}
@@ -426,7 +426,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
               <div className="flex gap-3">
                 <button
                   onClick={handleBuyNow}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-background py-3.5 text-base font-semibold text-[#FFD700] transition-colors hover:bg-card border-2 border-[#FFD700] active:bg-input"
+                  className="nb-btn flex-1 bg-transparent border-[3px] border-[#FFD700] text-[#FFD700] flex items-center justify-center gap-2 py-3.5 text-base"
                 >
                   <Zap className="h-5 w-5" />
                   {t('buyNow')}
@@ -439,7 +439,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
                       navigate('login')
                     }
                   }}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-background py-3.5 px-4 text-base font-semibold text-[#FFD700] transition-colors hover:bg-card border-2 border-[#FFD700] active:bg-input"
+                  className="nb-btn bg-[#4ECDC4] text-[#0A0A0A] flex items-center justify-center gap-2 py-3.5 px-4 text-base"
                 >
                   <MessageCircle className="h-5 w-5" />
                 </button>
@@ -448,7 +448,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
           ) : (
             <button
               disabled
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-input py-3.5 text-base font-semibold text-muted-foreground cursor-not-allowed"
+              className="nb-btn w-full bg-input text-muted-foreground flex items-center justify-center gap-2 py-3.5 text-base cursor-not-allowed"
             >
               {t('outOfStock')}
             </button>

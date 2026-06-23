@@ -80,20 +80,17 @@ export function LoginForm() {
       transition={{ duration: 0.4 }}
       className="max-w-md mx-auto px-4 py-8"
     >
-      <div className="bg-card rounded-2xl border border-border p-6">
+      <div className="nb-card bg-card p-6">
         {/* Title */}
         <div className="text-center mb-6">
-          <div
-            className="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(255, 215, 0, 0.1)' }}
-          >
+          <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center bg-[#FFD700] border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)]">
             <svg
               width="28"
               height="28"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#FFD700"
-              strokeWidth="2"
+              stroke="#1A1A1A"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
@@ -102,8 +99,10 @@ export function LoginForm() {
               <line x1="15" y1="12" x2="3" y2="12" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-foreground">Welcome Back</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h2 className="text-xl font-black text-foreground uppercase tracking-wide">
+            Welcome Back
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1 font-semibold">
             Sign in to your account
           </p>
         </div>
@@ -113,11 +112,7 @@ export function LoginForm() {
           <motion.div
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 p-3 rounded-lg text-sm font-medium"
-            style={{
-              backgroundColor: 'rgba(244, 42, 65, 0.1)',
-              color: '#f42a41',
-            }}
+            className="mb-4 p-3 rounded-xl text-sm font-bold border-[3px] border-[#EF4444] bg-[#EF4444]/10 text-[#EF4444]"
           >
             {error}
           </motion.div>
@@ -129,7 +124,7 @@ export function LoginForm() {
           <div>
             <label
               htmlFor="login-email"
-              className="block text-sm font-medium text-muted-foreground mb-1.5"
+              className="block text-sm font-bold text-foreground mb-1.5"
             >
               Email
             </label>
@@ -142,7 +137,7 @@ export function LoginForm() {
                 setError('')
               }}
               placeholder="your@email.com"
-              className="w-full px-4 py-3 rounded-xl border border-border text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700] transition-all"
+              className="nb-input w-full px-4 py-3 text-sm bg-background"
               autoComplete="email"
             />
           </div>
@@ -151,7 +146,7 @@ export function LoginForm() {
           <div>
             <label
               htmlFor="login-password"
-              className="block text-sm font-medium text-muted-foreground mb-1.5"
+              className="block text-sm font-bold text-foreground mb-1.5"
             >
               Password
             </label>
@@ -165,23 +160,23 @@ export function LoginForm() {
                   setError('')
                 }}
                 placeholder="Enter your password"
-                className="w-full px-4 py-3 pr-12 rounded-xl border border-border text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700] transition-all"
+                className="nb-input w-full px-4 py-3 pr-12 text-sm bg-background"
                 autoComplete="current-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-[#FFD700] transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md border-2 border-foreground bg-[#FFD700] text-[#1A1A1A] hover:bg-[#FFE44D] transition-colors shadow-[2px_2px_0px_var(--foreground)]"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
                   <svg
-                    width="20"
-                    height="20"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
@@ -190,12 +185,12 @@ export function LoginForm() {
                   </svg>
                 ) : (
                   <svg
-                    width="20"
-                    height="20"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
@@ -207,11 +202,11 @@ export function LoginForm() {
             </div>
           </div>
 
-          {/* Login button - yellow bg, black text */}
+          {/* Login button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98] bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D]"
+            className="nb-btn w-full bg-[#FFD700] text-[#0A0A0A] py-3.5 font-black uppercase disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -242,12 +237,12 @@ export function LoginForm() {
           </button>
         </form>
 
-        {/* Register link - yellow text */}
-        <p className="text-center text-sm text-muted-foreground mt-6">
+        {/* Register link */}
+        <p className="text-center text-sm text-muted-foreground mt-6 font-semibold">
           Don&apos;t have an account?{' '}
           <button
             onClick={() => navigate('register')}
-            className="font-semibold text-[#FFD700] hover:text-[#FFE44D] transition-colors"
+            className="text-[#FF6B9D] font-bold hover:underline"
           >
             Register
           </button>

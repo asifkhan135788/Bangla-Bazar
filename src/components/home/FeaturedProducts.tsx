@@ -98,10 +98,10 @@ export default function FeaturedProducts() {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+          <h2 className="font-heading font-black text-2xl sm:text-3xl text-foreground">
             {t('featuredCollection')}
           </h2>
-          <div className="mt-2 h-1 w-16 rounded-full bg-[#FFD700]" />
+          <div className="nb-accent-bar mt-3 w-16" />
         </motion.div>
 
         {/* Loading Skeleton */}
@@ -119,7 +119,7 @@ export default function FeaturedProducts() {
             <p className="text-muted-foreground mb-3">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="text-sm text-[#FFD700] font-medium hover:underline"
+              className="text-[#FF6B9D] font-bold text-sm hover:underline"
             >
               {t('tryAgain')}
             </button>
@@ -175,10 +175,10 @@ export default function FeaturedProducts() {
           >
             <button
               onClick={() => navigate('categories')}
-              className="group flex items-center gap-2 rounded-xl border-2 border-[#FFD700] px-6 py-2.5 text-sm font-semibold text-[#FFD700] transition-all hover:bg-[#FFD700] hover:text-[#0A0A0A] active:scale-95"
+              className="nb-btn-sm border-[3px] border-[#FFD700] text-[#FFD700] shadow-[4px_4px_0px_var(--foreground)] hover:shadow-[5px_5px_0px_var(--foreground)] hover:translate-x-[-1px] hover:translate-y-[-1px] active:shadow-[1px_1px_0px_var(--foreground)] active:translate-x-[2px] active:translate-y-[2px] flex items-center gap-2 px-6 py-2.5 text-sm transition-all"
             >
               {t('viewAll')}
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4" />
             </button>
           </motion.div>
         )}

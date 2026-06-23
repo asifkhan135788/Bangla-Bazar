@@ -110,7 +110,7 @@ function ConversationList({
         <p className="text-sm text-muted-foreground text-center">{t('noMessages')}</p>
         <button
           onClick={() => onSelect('admin')}
-          className="mt-4 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D] transition-colors"
+          className="nb-btn mt-4 bg-[#FFD700] text-[#0A0A0A]"
         >
           {t('contactSupport')}
         </button>
@@ -124,7 +124,7 @@ function ConversationList({
         <button
           key={conv.otherUserId}
           onClick={() => onSelect(conv.otherUserId)}
-          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#FFD700]/5 transition-colors text-left"
+          className="w-full flex items-center gap-3 px-4 py-3 border-b-[2px] border-foreground/20 hover:bg-[#FFD700]/10 transition-colors text-left"
         >
           {/* Avatar */}
           <div className="relative shrink-0">
@@ -132,11 +132,11 @@ function ConversationList({
               <img
                 src={conv.otherUserAvatar}
                 alt={conv.otherUserName}
-                className="w-12 h-12 rounded-full object-cover border border-border"
+                className="w-12 h-12 rounded-full object-cover border-[2px] border-foreground"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-[#FFD700]/20 flex items-center justify-center">
-                <span className="text-[#FFD700] font-bold text-sm">
+              <div className="w-12 h-12 rounded-full bg-[#FFD700]/20 flex items-center justify-center border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]">
+                <span className="text-[#FFD700] font-black text-sm">
                   {conv.otherUserId === 'admin'
                     ? 'CS'
                     : (conv.otherUserName?.[0]?.toUpperCase() || 'U')}
@@ -145,17 +145,17 @@ function ConversationList({
             )}
             {/* Online indicator (always show for admin) */}
             {conv.otherUserId === 'admin' && (
-              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background" />
+              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#4ECDC4] rounded-full border-2 border-foreground" />
             )}
           </div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground truncate">
+              <h3 className="text-sm font-extrabold text-foreground truncate">
                 {conv.otherUserId === 'admin' ? t('customerSupport') : conv.otherUserName}
               </h3>
-              <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+              <span className="text-[10px] text-muted-foreground shrink-0 ml-2 font-bold">
                 {formatRelativeTime(conv.lastMessageTime)}
               </span>
             </div>
@@ -164,7 +164,7 @@ function ConversationList({
                 {conv.senderType === 'admin' ? '' : t('you') + ': '}{conv.lastMessage}
               </p>
               {conv.unreadCount > 0 && (
-                <span className="ml-2 shrink-0 flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold bg-[#FFD700] text-[#0A0A0A] px-1">
+                <span className="nb-badge ml-2 shrink-0 bg-[#FF6B9D] text-white">
                   {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                 </span>
               )}
@@ -403,10 +403,10 @@ function ChatRoom({
       className="flex flex-col h-[calc(100vh-7rem)] bg-background"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
+      <div className="flex items-center gap-3 px-4 py-3 border-b-[3px] border-foreground bg-card shadow-[0_3px_0_0_var(--foreground)]">
         <button
           onClick={onBack}
-          className="p-1.5 rounded-lg hover:bg-[#FFD700]/10 transition-colors text-foreground"
+          className="nb-btn-sm bg-card text-foreground"
           aria-label="Back to conversations"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -421,31 +421,31 @@ function ChatRoom({
               className="w-10 h-10 rounded-full object-cover border border-border"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-[#FFD700]/20 flex items-center justify-center">
-              <span className="text-[#FFD700] font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-[#FFD700]/20 flex items-center justify-center border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]">
+              <span className="text-[#FFD700] font-black text-sm">
                 {otherUserId === 'admin' ? 'CS' : (displayName[0]?.toUpperCase() || 'U')}
               </span>
             </div>
           )}
           {isOtherOnline && (
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-card" />
+            <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#4ECDC4] rounded-full border-2 border-foreground" />
           )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-bold text-foreground truncate">{displayName}</h2>
+          <h2 className="text-sm font-black text-foreground truncate">{displayName}</h2>
           <p className="text-xs text-muted-foreground">
             {isTyping ? (
-              <span className="text-[#FFD700] flex items-center gap-1">
+              <span className="text-[#4ECDC4] font-bold flex items-center gap-1">
                 typing
                 <span className="inline-flex gap-0.5">
-                  <span className="w-1 h-1 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1 h-1 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1 h-1 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-1 h-1 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1 h-1 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1 h-1 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </span>
               </span>
             ) : isOtherOnline ? (
-              <span className="text-green-500">Online</span>
+              <span className="text-[#4ECDC4] font-bold">Online</span>
             ) : (
               t('replyWithinMinutes')
             )}
@@ -454,10 +454,10 @@ function ChatRoom({
 
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#FFD700]/10 transition-colors"
+          className="nb-btn-sm bg-card text-foreground"
           aria-label="Close chat"
         >
-          <X className="h-5 w-5 text-muted-foreground" />
+          <X className="h-5 w-5" />
         </button>
       </div>
 
@@ -482,14 +482,13 @@ function ChatRoom({
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
                 <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center mb-3"
-                  style={{ backgroundColor: 'rgba(255, 215, 0, 0.08)' }}
+                  className="w-16 h-16 rounded-full flex items-center justify-center mb-3 border-[2px] border-foreground shadow-[3px_3px_0px_var(--foreground)] bg-[#FFD700]/10"
                 >
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                 </div>
-                <p className="text-sm text-muted-foreground">{t('noMessages')}</p>
+                <p className="text-sm text-foreground font-black">{t('noMessages')}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -520,21 +519,21 @@ function ChatRoom({
                         </div>
                         {/* Message bubble */}
                         <div
-                          className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                          className={`max-w-[80%] px-4 py-2.5 rounded-xl text-sm leading-relaxed font-medium ${
                             isMe
-                              ? 'bg-[#FFD700] text-[#0A0A0A] rounded-br-md'
-                              : 'bg-card border border-border text-foreground rounded-bl-md'
+                              ? 'bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
+                              : 'bg-card text-foreground border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
                           }`}
                         >
                           <p className="break-words">{msg.message}</p>
                         </div>
                         {/* Time + read status */}
                         <div className={`flex items-center gap-1 mt-0.5 ${isMe ? 'mr-1' : 'ml-1'}`}>
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[10px] text-muted-foreground font-bold">
                             {formatTime(msg.createdAt)}
                           </span>
                           {isMe && (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-[10px] text-muted-foreground font-bold">
                               {msg.read ? '✓✓' : '✓'}
                             </span>
                           )}
@@ -553,11 +552,11 @@ function ChatRoom({
                       exit={{ opacity: 0, y: 5 }}
                       className="flex items-start"
                     >
-                      <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3">
+                      <div className="bg-card border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] rounded-xl px-4 py-3">
                         <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <div className="w-2 h-2 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
                       </div>
                     </motion.div>
@@ -581,7 +580,7 @@ function ChatRoom({
       )}
 
       {/* Input Area */}
-      <div className="border-t border-border bg-card px-4 py-3">
+      <div className="border-t-[3px] border-foreground bg-card px-4 py-3">
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
@@ -591,12 +590,12 @@ function ChatRoom({
             onKeyDown={handleKeyDown}
             placeholder={t('typeMessage')}
             disabled={sending}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700] disabled:opacity-50"
+            className="nb-input flex-1 px-4 py-3 bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700] disabled:opacity-50"
           />
           <button
             onClick={handleSend}
             disabled={sending || !newMessage.trim()}
-            className="w-10 h-10 rounded-xl bg-[#FFD700] flex items-center justify-center text-[#0A0A0A] disabled:opacity-40 hover:bg-[#FFE44D] transition-colors active:scale-95"
+            className="nb-btn-sm bg-[#FFD700] text-[#0A0A0A] disabled:opacity-40 active:scale-95"
             aria-label="Send message"
           >
             {sending ? (
@@ -709,31 +708,31 @@ export function ChatView() {
       className="flex flex-col h-[calc(100vh-7rem)] bg-background"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+      <div className="flex items-center justify-between px-4 py-3 border-b-[3px] border-foreground bg-card shadow-[0_3px_0_0_var(--foreground)]">
         <div className="flex items-center gap-3">
           <button
             onClick={goBack}
-            className="p-1.5 rounded-lg hover:bg-[#FFD700]/10 transition-colors text-foreground"
+            className="nb-btn-sm bg-card text-foreground"
             aria-label="Go back"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h2 className="text-lg font-bold text-foreground">{t('chat')}</h2>
+          <h2 className="text-lg font-black text-foreground">{t('chat')}</h2>
         </div>
         <button
           onClick={() => setActiveChatUserId('admin')}
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D] transition-colors"
+          className="nb-btn-sm bg-[#FFD700] text-[#0A0A0A]"
         >
           {t('contactSupport')}
         </button>
       </div>
 
       {/* Search */}
-      <div className="px-4 py-3 border-b border-border">
+      <div className="px-4 py-3 border-b-[2px] border-foreground/20">
         <input
           type="text"
           placeholder={t('searchProducts')}
-          className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700]"
+          className="nb-input w-full px-4 py-2.5 bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700]"
         />
       </div>
 

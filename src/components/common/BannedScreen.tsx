@@ -54,22 +54,17 @@ export function BannedScreen() {
           >
             {/* Red warning icon with pulse */}
             <motion.div
-              className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center"
-              style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+              className="w-24 h-24 rounded-xl mx-auto mb-6 flex items-center justify-center bg-[#EF4444]/10 border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]"
               animate={{
-                boxShadow: [
-                  '0 0 0 0 rgba(239, 68, 68, 0.2)',
-                  '0 0 0 20px rgba(239, 68, 68, 0)',
-                  '0 0 0 0 rgba(239, 68, 68, 0)',
-                ],
+                rotate: [0, -2, 2, -2, 0],
               }}
               transition={{
-                duration: 2,
+                duration: 3,
                 repeat: Infinity,
                 ease: 'easeInOut',
               }}
             >
-              <ShieldAlert className="h-12 w-12 text-red-500" />
+              <ShieldAlert className="h-12 w-12 text-[#EF4444]" />
             </motion.div>
 
             {/* Title */}
@@ -77,7 +72,7 @@ export function BannedScreen() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-2xl sm:text-3xl font-extrabold text-red-500 mb-3"
+              className="text-2xl sm:text-3xl font-black text-[#EF4444] mb-3 uppercase tracking-tight"
             >
               {t('accountBanned')}
             </motion.h1>
@@ -87,7 +82,7 @@ export function BannedScreen() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="bg-card border border-border rounded-2xl p-6 mb-4"
+              className="nb-card-static bg-card p-6 mb-4"
             >
               <p className="text-sm text-foreground leading-relaxed">
                 {t('bannedMessage')}
@@ -113,7 +108,7 @@ export function BannedScreen() {
               {/* Chat with CS button */}
               <button
                 onClick={() => navigate('chat', { senderId: 'admin' })}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FFD700] text-[#0A0A0A] font-semibold text-sm hover:bg-[#FFE44D] transition-colors"
+                className="nb-btn-sm inline-flex items-center gap-2 px-5 py-2.5 bg-[#FFD700] text-[#0A0A0A] font-bold text-sm"
               >
                 <MessageCircle className="h-4 w-4" />
                 {t('chatWithSupport')}
@@ -122,7 +117,7 @@ export function BannedScreen() {
               <div className="pt-1">
                 <a
                   href="mailto:support@banglabazar.com.bd"
-                  className="inline-block text-sm font-semibold text-[#FFD700] hover:text-[#FFE44D] transition-colors"
+                  className="inline-block text-sm font-bold text-[#FF6B9D]"
                 >
                   support@banglabazar.com.bd
                 </a>
@@ -139,7 +134,7 @@ export function BannedScreen() {
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className="mt-6 h-1 w-16 mx-auto rounded-full bg-[#FFD700] origin-center"
+              className="mt-6 nb-accent-bar w-16 mx-auto origin-center"
             />
           </motion.div>
         </motion.div>

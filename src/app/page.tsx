@@ -28,14 +28,14 @@ import { ImageSwiper } from '@/components/home/ImageSwiper'
 
 function HomeView() {
   return (
-    <div className="space-y-2">
+    <div className="space-y-0">
       <HeroSection />
       <div className="w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-14 bg-background">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+          <h2 className="text-2xl sm:text-3xl font-heading font-black text-foreground tracking-tight">
             Trending Collections
           </h2>
-          <div className="mt-2 h-1 w-16 rounded-full bg-[#FFD700]" />
+          <div className="mt-3 nb-accent-bar w-20" />
           <div className="mt-8 flex justify-center">
             <ImageSwiper />
           </div>

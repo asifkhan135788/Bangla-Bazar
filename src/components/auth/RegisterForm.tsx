@@ -44,9 +44,9 @@ function getPasswordStrength(password: string): {
   if (/[0-9]/.test(password)) score++
   if (/[^A-Za-z0-9]/.test(password)) score++
 
-  if (score <= 1) return { score, label: 'Weak', color: '#f42a41' }
-  if (score <= 2) return { score, label: 'Fair', color: '#FFD700' }
-  if (score <= 3) return { score, label: 'Good', color: '#3b82f6' }
+  if (score <= 1) return { score, label: 'Weak', color: '#EF4444' }
+  if (score <= 2) return { score, label: 'Fair', color: '#FF8A5C' }
+  if (score <= 3) return { score, label: 'Good', color: '#4ECDC4' }
   return { score, label: 'Strong', color: '#22c55e' }
 }
 
@@ -158,20 +158,17 @@ export function RegisterForm() {
       transition={{ duration: 0.4 }}
       className="max-w-md mx-auto px-4 py-8"
     >
-      <div className="bg-card rounded-2xl border border-border p-6">
+      <div className="nb-card bg-card p-6">
         {/* Title */}
         <div className="text-center mb-6">
-          <div
-            className="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(255, 215, 0, 0.1)' }}
-          >
+          <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center bg-[#FF6B9D] border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)]">
             <svg
               width="28"
               height="28"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#FFD700"
-              strokeWidth="2"
+              stroke="#FFFFFF"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
@@ -181,8 +178,10 @@ export function RegisterForm() {
               <line x1="23" y1="11" x2="17" y2="11" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-foreground">Create Account</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h2 className="text-xl font-black text-foreground uppercase tracking-wide">
+            Create Account
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1 font-semibold">
             Join us and start shopping
           </p>
         </div>
@@ -192,11 +191,7 @@ export function RegisterForm() {
           <motion.div
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 p-3 rounded-lg text-sm font-medium"
-            style={{
-              backgroundColor: 'rgba(244, 42, 65, 0.1)',
-              color: '#f42a41',
-            }}
+            className="mb-4 p-3 rounded-xl text-sm font-bold border-[3px] border-[#EF4444] bg-[#EF4444]/10 text-[#EF4444]"
           >
             {error}
           </motion.div>
@@ -208,7 +203,7 @@ export function RegisterForm() {
           <div>
             <label
               htmlFor="reg-name"
-              className="block text-sm font-medium text-muted-foreground mb-1.5"
+              className="block text-sm font-bold text-foreground mb-1.5"
             >
               Full Name
             </label>
@@ -218,15 +213,13 @@ export function RegisterForm() {
               value={form.name || ''}
               onChange={(e) => updateField('name', e.target.value)}
               placeholder="Enter your full name"
-              className={`w-full px-4 py-3 rounded-xl border text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 transition-all ${
-                fieldErrors.name
-                  ? 'border-red-400 focus:border-red-400'
-                  : 'border-border focus:border-[#FFD700]'
+              className={`nb-input w-full px-4 py-3 text-sm bg-background ${
+                fieldErrors.name ? 'border-[#EF4444]' : ''
               }`}
               autoComplete="name"
             />
             {fieldErrors.name && (
-              <p className="text-xs mt-1" style={{ color: '#f42a41' }}>
+              <p className="text-xs mt-1 font-bold text-[#EF4444]">
                 {fieldErrors.name}
               </p>
             )}
@@ -236,7 +229,7 @@ export function RegisterForm() {
           <div>
             <label
               htmlFor="reg-email"
-              className="block text-sm font-medium text-muted-foreground mb-1.5"
+              className="block text-sm font-bold text-foreground mb-1.5"
             >
               Email
             </label>
@@ -246,15 +239,13 @@ export function RegisterForm() {
               value={form.email || ''}
               onChange={(e) => updateField('email', e.target.value)}
               placeholder="your@email.com"
-              className={`w-full px-4 py-3 rounded-xl border text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 transition-all ${
-                fieldErrors.email
-                  ? 'border-red-400 focus:border-red-400'
-                  : 'border-border focus:border-[#FFD700]'
+              className={`nb-input w-full px-4 py-3 text-sm bg-background ${
+                fieldErrors.email ? 'border-[#EF4444]' : ''
               }`}
               autoComplete="email"
             />
             {fieldErrors.email && (
-              <p className="text-xs mt-1" style={{ color: '#f42a41' }}>
+              <p className="text-xs mt-1 font-bold text-[#EF4444]">
                 {fieldErrors.email}
               </p>
             )}
@@ -264,7 +255,7 @@ export function RegisterForm() {
           <div>
             <label
               htmlFor="reg-phone"
-              className="block text-sm font-medium text-muted-foreground mb-1.5"
+              className="block text-sm font-bold text-foreground mb-1.5"
             >
               Phone Number
             </label>
@@ -275,15 +266,13 @@ export function RegisterForm() {
               onChange={(e) => updateField('phone', e.target.value)}
               placeholder="01XXXXXXXXX"
               maxLength={11}
-              className={`w-full px-4 py-3 rounded-xl border text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 transition-all ${
-                fieldErrors.phone
-                  ? 'border-red-400 focus:border-red-400'
-                  : 'border-border focus:border-[#FFD700]'
+              className={`nb-input w-full px-4 py-3 text-sm bg-background ${
+                fieldErrors.phone ? 'border-[#EF4444]' : ''
               }`}
               autoComplete="tel"
             />
             {fieldErrors.phone && (
-              <p className="text-xs mt-1" style={{ color: '#f42a41' }}>
+              <p className="text-xs mt-1 font-bold text-[#EF4444]">
                 {fieldErrors.phone}
               </p>
             )}
@@ -293,7 +282,7 @@ export function RegisterForm() {
           <div>
             <label
               htmlFor="reg-password"
-              className="block text-sm font-medium text-muted-foreground mb-1.5"
+              className="block text-sm font-bold text-foreground mb-1.5"
             >
               Password
             </label>
@@ -304,27 +293,25 @@ export function RegisterForm() {
                 value={form.password || ''}
                 onChange={(e) => updateField('password', e.target.value)}
                 placeholder="Create a strong password"
-                className={`w-full px-4 py-3 pr-12 rounded-xl border text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 transition-all ${
-                  fieldErrors.password
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-border focus:border-[#FFD700]'
+                className={`nb-input w-full px-4 py-3 pr-12 text-sm bg-background ${
+                  fieldErrors.password ? 'border-[#EF4444]' : ''
                 }`}
                 autoComplete="new-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-[#FFD700] transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md border-2 border-foreground bg-[#4ECDC4] text-[#1A1A1A] hover:brightness-110 transition shadow-[2px_2px_0px_var(--foreground)]"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
                   <svg
-                    width="20"
-                    height="20"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
@@ -333,12 +320,12 @@ export function RegisterForm() {
                   </svg>
                 ) : (
                   <svg
-                    width="20"
-                    height="20"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
@@ -349,7 +336,7 @@ export function RegisterForm() {
               </button>
             </div>
             {fieldErrors.password && (
-              <p className="text-xs mt-1" style={{ color: '#f42a41' }}>
+              <p className="text-xs mt-1 font-bold text-[#EF4444]">
                 {fieldErrors.password}
               </p>
             )}
@@ -360,18 +347,18 @@ export function RegisterForm() {
                   {[1, 2, 3, 4, 5].map((level) => (
                     <div
                       key={level}
-                      className="h-1.5 flex-1 rounded-full transition-colors"
+                      className="h-2 flex-1 rounded-sm border-2 border-foreground transition-colors"
                       style={{
                         backgroundColor:
                           level <= passwordStrength.score
                             ? passwordStrength.color
-                            : 'hsl(var(--input))',
+                            : 'transparent',
                       }}
                     />
                   ))}
                 </div>
                 <p
-                  className="text-xs font-medium"
+                  className="text-xs font-extrabold"
                   style={{ color: passwordStrength.color }}
                 >
                   {passwordStrength.label}
@@ -384,7 +371,7 @@ export function RegisterForm() {
           <div>
             <label
               htmlFor="reg-confirm-password"
-              className="block text-sm font-medium text-muted-foreground mb-1.5"
+              className="block text-sm font-bold text-foreground mb-1.5"
             >
               Confirm Password
             </label>
@@ -397,29 +384,27 @@ export function RegisterForm() {
                   updateField('confirmPassword', e.target.value)
                 }
                 placeholder="Re-enter your password"
-                className={`w-full px-4 py-3 pr-12 rounded-xl border text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 transition-all ${
-                  fieldErrors.confirmPassword
-                    ? 'border-red-400 focus:border-red-400'
-                    : 'border-border focus:border-[#FFD700]'
+                className={`nb-input w-full px-4 py-3 pr-12 text-sm bg-background ${
+                  fieldErrors.confirmPassword ? 'border-[#EF4444]' : ''
                 }`}
                 autoComplete="new-password"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-[#FFD700] transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md border-2 border-foreground bg-[#4ECDC4] text-[#1A1A1A] hover:brightness-110 transition shadow-[2px_2px_0px_var(--foreground)]"
                 aria-label={
                   showConfirmPassword ? 'Hide password' : 'Show password'
                 }
               >
                 {showConfirmPassword ? (
                   <svg
-                    width="20"
-                    height="20"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
@@ -428,12 +413,12 @@ export function RegisterForm() {
                   </svg>
                 ) : (
                   <svg
-                    width="20"
-                    height="20"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
@@ -444,17 +429,17 @@ export function RegisterForm() {
               </button>
             </div>
             {fieldErrors.confirmPassword && (
-              <p className="text-xs mt-1" style={{ color: '#f42a41' }}>
+              <p className="text-xs mt-1 font-bold text-[#EF4444]">
                 {fieldErrors.confirmPassword}
               </p>
             )}
           </div>
 
-          {/* Create account button - yellow bg, black text */}
+          {/* Create account button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98] bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D]"
+            className="nb-btn w-full bg-[#FFD700] text-[#0A0A0A] py-3.5 font-black uppercase disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -487,16 +472,18 @@ export function RegisterForm() {
 
         {/* Divider */}
         <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground font-medium">OR</span>
-          <div className="flex-1 h-px bg-border" />
+          <div className="flex-1 nb-divider" />
+          <span className="text-xs text-foreground font-black bg-[#4ECDC4] px-3 py-1 rounded-md border-2 border-foreground shadow-[2px_2px_0px_var(--foreground)]">
+            OR
+          </span>
+          <div className="flex-1 nb-divider" />
         </div>
 
         {/* Google Sign Up */}
         <button
           onClick={handleGoogleSignUp}
           disabled={loading}
-          className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-3 border border-border bg-card hover:bg-[#FFD700]/5 transition-colors disabled:opacity-50"
+          className="nb-btn w-full bg-white text-foreground border-[3px] py-3 flex items-center justify-center gap-3 disabled:opacity-50"
         >
           <svg width="20" height="20" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -504,15 +491,15 @@ export function RegisterForm() {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          <span className="text-foreground">Sign up with Google</span>
+          <span className="font-extrabold">Sign up with Google</span>
         </button>
 
-        {/* Login link - yellow text */}
-        <p className="text-center text-sm text-muted-foreground mt-6">
+        {/* Login link */}
+        <p className="text-center text-sm text-muted-foreground mt-6 font-semibold">
           Already have an account?{' '}
           <button
             onClick={() => navigate('login')}
-            className="font-semibold text-[#FFD700] hover:text-[#FFE44D] transition-colors"
+            className="text-[#FF6B9D] font-bold hover:underline"
           >
             Login
           </button>

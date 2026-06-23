@@ -71,7 +71,7 @@ export default function BottomNav() {
     >
       <div className="mx-3 mb-3">
         <div
-          className="flex items-center justify-around rounded-2xl h-16 px-2 bg-[#FFD700] border-3 border-[#1A1A1A] shadow-[4px_4px_0px_#1A1A1A]"
+          className="flex items-center justify-around rounded-2xl h-16 px-2 bg-[#FFD700] border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]"
         >
           {tabs.map((tab) => {
             const isActive = currentView === tab.id
@@ -86,7 +86,7 @@ export default function BottomNav() {
                 {isActive && (
                   <motion.div
                     layoutId="nb-nav-pill"
-                    className="absolute inset-0 rounded-xl bg-white border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A]"
+                    className="absolute inset-0 rounded-xl bg-white border-[3px] border-foreground shadow-[2px_2px_0px_var(--foreground)]"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
                 )}
@@ -99,7 +99,7 @@ export default function BottomNav() {
                   <span className="relative">
                     {tab.icon}
                     {tab.id === 'cart' && displayItemCount > 0 && (
-                      <span className="absolute -top-1.5 -right-2.5 flex items-center justify-center min-w-[16px] h-[16px] rounded-full text-[9px] font-black bg-[#FF6B9D] text-white border border-[#1A1A1A] px-0.5">
+                      <span className="absolute -top-1.5 -right-2.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-black bg-[#FF6B9D] text-white border-2 border-foreground px-0.5">
                         {displayItemCount > 99 ? '99+' : displayItemCount}
                       </span>
                     )}
@@ -111,7 +111,7 @@ export default function BottomNav() {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
                         transition={{ type: 'spring', stiffness: 400, damping: 10 }}
-                        className="text-xs font-extrabold whitespace-nowrap"
+                        className="text-xs font-extrabold whitespace-nowrap uppercase tracking-wider"
                       >
                         {t(tab.labelKey)}
                       </motion.span>

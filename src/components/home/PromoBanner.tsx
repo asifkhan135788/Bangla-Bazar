@@ -9,13 +9,9 @@ export default function PromoBanner() {
 
   return (
     <section className="w-full overflow-hidden">
-      <div className="relative bg-gradient-to-r from-background via-card to-background">
-        {/* Yellow Accent Line at Top */}
-        <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-transparent via-[#FFD700] to-transparent" />
-
-        {/* Decorative Glow */}
-        <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-[#FFD700]/5 blur-2xl" />
-        <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-[#FFD700]/5 blur-2xl" />
+      <div className="relative bg-[#FFD700] border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]">
+        {/* Top Border Line */}
+        <div className="border-t-[3px] border-foreground" />
 
         <div className="relative z-10 flex flex-col items-center justify-center px-4 py-8 sm:py-10 text-center">
           {/* Sparkle Icon */}
@@ -25,7 +21,7 @@ export default function PromoBanner() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, type: 'spring' }}
           >
-            <Sparkles className="h-6 w-6 text-[#FFD700] mb-2" />
+            <Sparkles className="h-8 w-8 text-[#FF6B9D] mb-2" />
           </motion.div>
 
           {/* English Text */}
@@ -34,10 +30,10 @@ export default function PromoBanner() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-xl sm:text-2xl md:text-3xl font-extrabold text-foreground"
+            className="text-xl sm:text-2xl md:text-3xl font-black text-foreground"
           >
             Special Offer!{' '}
-            <span className="text-[#FFD700]">Traditional Wear Collection</span>
+            <span className="text-[#FF6B9D]">Traditional Wear Collection</span>
           </motion.h2>
 
           {/* Bengali Text */}
@@ -46,7 +42,7 @@ export default function PromoBanner() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-2 text-sm sm:text-base text-foreground/70"
+            className="mt-2 text-sm sm:text-base text-foreground/70 font-bold"
           >
             বিশেষ অফার! ঐতিহ্যবাহী পোশাক সংগ্রহ
           </motion.p>
@@ -62,7 +58,7 @@ export default function PromoBanner() {
               }}
               className="whitespace-nowrap"
             >
-              <span className="text-foreground/40 text-xs sm:text-sm tracking-widest uppercase">
+              <span className="text-foreground/40 text-xs sm:text-sm tracking-widest uppercase font-bold">
                 Limited Time Offer - সীমিত সময়ের অফার - Free Delivery on Orders Over ৳999 - ৳৯৯৯ এর বেশি অর্ডারে ফ্রি ডেলিভারি - Limited Time Offer - সীমিত সময়ের অফার - Free Delivery on Orders Over ৳999 - ৳৯৯৯ এর বেশি অর্ডারে ফ্রি ডেলিভারি
               </span>
             </motion.div>
@@ -74,18 +70,17 @@ export default function PromoBanner() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => navigate('categories')}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#FFD700] px-6 py-2.5 text-sm font-semibold text-[#0A0A0A] shadow-lg transition-colors hover:bg-[#FFE44D]"
+            className="nb-btn mt-5 inline-flex items-center gap-2 bg-[#1A1A1A] text-[#FFD700] px-6 py-2.5 text-sm"
           >
             Shop Now
             <ArrowRight className="h-4 w-4" />
           </motion.button>
         </div>
 
-        {/* Bottom Yellow Accent Line */}
-        <div className="absolute bottom-0 left-0 h-1.5 w-full bg-gradient-to-r from-transparent via-[#FFD700] to-transparent" />
+        {/* Bottom Border Line */}
+        <div className="border-b-[3px] border-foreground" />
       </div>
     </section>
   )

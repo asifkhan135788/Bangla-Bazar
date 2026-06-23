@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -131,7 +131,7 @@ interface DashboardStats {
   totalRevenue: number
 }
 
-type AdminView = 'dashboard' | 'products' | 'categories' | 'orders' | 'users' | 'user-logs'
+type AdminView = 'dashboard' | 'products' | 'categories' | 'orders' | 'users' | 'user-logs' | 'chat'
 
 // ═══════════════════════════════════════════════════════════════
 // API Helper
@@ -309,6 +309,14 @@ function SearchIcon({ className = 'w-4 h-4' }: { className?: string }) {
   )
 }
 
+function ChatIcon({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Helper functions
 // ═══════════════════════════════════════════════════════════════
@@ -401,12 +409,12 @@ function AdminLogin({ onLogin }: { onLogin: (auth: AdminAuth) => void }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] p-4">
       <div className="w-full max-w-md">
-        <div className="bg-[#1A1A1A] rounded-2xl shadow-lg p-8 border border-[#2A2A2A]">
+        <div className="bg-[#1A1A1A] rounded-xl border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)] p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: '#FFD700' }}>
+            <div className="w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center border-[2px] border-foreground shadow-[3px_3px_0px_var(--foreground)]" style={{ backgroundColor: '#FFD700' }}>
               <span className="text-[#0A0A0A] text-2xl font-bold">BB</span>
             </div>
-            <h1 className="text-2xl font-bold text-white">Bangla Bazar Admin</h1>
+            <h1 className="text-2xl font-black text-white">Bangla Bazar Admin</h1>
             <p className="text-gray-400 mt-1 text-sm">Sign in to your admin account</p>
           </div>
 
@@ -421,7 +429,7 @@ function AdminLogin({ onLogin }: { onLogin: (auth: AdminAuth) => void }) {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500"
+                className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500"
               />
             </div>
 
@@ -436,7 +444,7 @@ function AdminLogin({ onLogin }: { onLogin: (auth: AdminAuth) => void }) {
                 required
                 disabled={loading}
                 minLength={6}
-                className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500"
+                className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500"
               />
             </div>
 
@@ -448,8 +456,7 @@ function AdminLogin({ onLogin }: { onLogin: (auth: AdminAuth) => void }) {
 
             <Button
               type="submit"
-              className="w-full font-medium"
-              style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}
+              className="w-full nb-btn bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] font-bold"
               disabled={loading}
             >
               {loading ? 'Signing in...' : 'Sign In'}
@@ -512,17 +519,18 @@ function DashboardView({ token }: { token: string }) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+      <h2 className="text-2xl font-black text-white">Dashboard</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card) => (
-          <div key={card.label} className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] p-6">
+          <div key={card.label} className="nb-card bg-card rounded-xl p-6">
+            <div className="h-1.5 rounded-full mb-3" style={{ backgroundColor: card.color }} />
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400 font-medium">{card.label}</p>
-                <p className="text-2xl font-bold text-white mt-1">{card.value}</p>
+                <p className="text-sm text-gray-400 font-bold">{card.label}</p>
+                <p className="text-2xl font-black text-white mt-1">{card.value}</p>
               </div>
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: card.color + '20', color: card.color }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]" style={{ backgroundColor: card.color + '20', color: card.color }}>
                 {card.icon}
               </div>
             </div>
@@ -530,19 +538,19 @@ function DashboardView({ token }: { token: string }) {
         ))}
       </div>
 
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]">
-        <div className="p-6 border-b border-[#2A2A2A]">
-          <h3 className="text-lg font-semibold text-white">Recent Orders</h3>
+      <div className="bg-[#1A1A1A] rounded-xl border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] overflow-hidden">
+        <div className="p-6 border-b-[3px] border-foreground bg-[#FFD700]/10">
+          <h3 className="text-lg font-black text-white">Recent Orders</h3>
         </div>
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
-              <TableHead className="text-gray-400">Order ID</TableHead>
-              <TableHead className="text-gray-400">Customer</TableHead>
-              <TableHead className="text-gray-400">Items</TableHead>
-              <TableHead className="text-gray-400">Total</TableHead>
-              <TableHead className="text-gray-400">Status</TableHead>
-              <TableHead className="text-gray-400">Date</TableHead>
+            <TableRow className="border-b-[2px] border-foreground/30 hover:bg-transparent">
+              <TableHead className="text-gray-400 font-bold">Order ID</TableHead>
+              <TableHead className="text-gray-400 font-bold">Customer</TableHead>
+              <TableHead className="text-gray-400 font-bold">Items</TableHead>
+              <TableHead className="text-gray-400 font-bold">Total</TableHead>
+              <TableHead className="text-gray-400 font-bold">Status</TableHead>
+              <TableHead className="text-gray-400 font-bold">Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -552,7 +560,7 @@ function DashboardView({ token }: { token: string }) {
               </TableRow>
             ) : (
               recentOrders.map((order) => (
-                <TableRow key={order.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+                <TableRow key={order.id} className="border-b-[2px] border-foreground/20 hover:bg-[#222]">
                   <TableCell className="font-mono text-xs text-white">{order.id.slice(-8)}</TableCell>
                   <TableCell className="text-white">{order.user?.name || order.user?.email || 'N/A'}</TableCell>
                   <TableCell className="text-gray-300">{order.orderItems?.length ?? 0}</TableCell>
@@ -825,22 +833,22 @@ function ProductsView({ token }: { token: string }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Products</h2>
-        <Button onClick={openAddModal} style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+        <Button onClick={openAddModal} className="nb-btn bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]">
           <PlusIcon className="w-4 h-4 mr-2" /> Add Product
         </Button>
       </div>
 
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+      <div className="bg-[#1A1A1A] rounded-xl border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
-              <TableHead className="text-gray-400">Image</TableHead>
-              <TableHead className="text-gray-400">Name</TableHead>
-              <TableHead className="text-gray-400">Category</TableHead>
-              <TableHead className="text-gray-400">Price</TableHead>
-              <TableHead className="text-gray-400">Stock</TableHead>
-              <TableHead className="text-gray-400">Status</TableHead>
-              <TableHead className="text-gray-400">Actions</TableHead>
+            <TableRow className="border-b-[2px] border-foreground/30 hover:bg-transparent">
+              <TableHead className="text-gray-400 font-bold">Image</TableHead>
+              <TableHead className="text-gray-400 font-bold">Name</TableHead>
+              <TableHead className="text-gray-400 font-bold">Category</TableHead>
+              <TableHead className="text-gray-400 font-bold">Price</TableHead>
+              <TableHead className="text-gray-400 font-bold">Stock</TableHead>
+              <TableHead className="text-gray-400 font-bold">Status</TableHead>
+              <TableHead className="text-gray-400 font-bold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -858,7 +866,7 @@ function ProductsView({ token }: { token: string }) {
                   imgSrc = ''
                 }
                 return (
-                  <TableRow key={product.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+                  <TableRow key={product.id} className="border-b-[2px] border-foreground/20 hover:bg-[#222]">
                     <TableCell>
                       <div className="w-10 h-10 rounded-lg bg-[#0A0A0A] flex items-center justify-center overflow-hidden">
                         {imgSrc ? (
@@ -891,12 +899,12 @@ function ProductsView({ token }: { token: string }) {
                     <TableCell>
                       <div className="flex gap-1">
                         {product.active ? (
-                          <Badge variant="outline" className="bg-[#FFD700]/10 text-[#FFD700] border-[#FFD700]/30">Active</Badge>
+                          <span className="nb-badge bg-[#4ECDC4]/20 text-[#4ECDC4]">Active</span>
                         ) : (
-                          <Badge variant="outline" className="bg-gray-800 text-gray-400 border-gray-600">Inactive</Badge>
+                          <span className="nb-badge bg-gray-800 text-gray-400">Inactive</span>
                         )}
                         {product.featured && (
-                          <Badge variant="outline" className="bg-yellow-900/30 text-yellow-300 border-yellow-700">Featured</Badge>
+                          <span className="nb-badge bg-[#FFD700]/20 text-[#FFD700]">Featured</span>
                         )}
                       </div>
                     </TableCell>
@@ -919,13 +927,13 @@ function ProductsView({ token }: { token: string }) {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A2A2A]">
+          <div className="flex items-center justify-between px-4 py-3 border-t-[2px] border-foreground/20">
             <p className="text-sm text-gray-400">Page {page} of {totalPages}</p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">
                 <ChevronLeftIcon className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">
                 <ChevronRightIcon className="w-4 h-4" />
               </Button>
             </div>
@@ -935,9 +943,9 @@ function ProductsView({ token }: { token: string }) {
 
       {/* Add/Edit Product Modal */}
       <Dialog open={showModal} onOpenChange={(open) => { if (!open) { setShowModal(false); resetForm() } }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-[#1A1A1A] border-[#2A2A2A]">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-[#1A1A1A] border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)]">
           <DialogHeader>
-            <DialogTitle className="text-white">{editProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
+            <DialogTitle className="text-white font-black">{editProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
             <DialogDescription className="text-gray-400">
               {editProduct ? 'Update product details below.' : 'Fill in the details to create a new product.'}
             </DialogDescription>
@@ -950,11 +958,11 @@ function ProductsView({ token }: { token: string }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-white">Name *</Label>
-              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Product name" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Product name" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Name (Bengali)</Label>
-              <Input value={formNameBN} onChange={(e) => setFormNameBN(e.target.value)} placeholder="বাংলায় নাম" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input value={formNameBN} onChange={(e) => setFormNameBN(e.target.value)} placeholder="বাংলায় নাম" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
 
             {/* Image Upload */}
@@ -964,7 +972,7 @@ function ProductsView({ token }: { token: string }) {
                 {(() => {
                   try {
                     return JSON.parse(formImages || '[]').map((img: string, idx: number) => (
-                      <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-[#2A2A2A]">
+                      <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-foreground/30">
                         <img src={img} alt={`Product ${idx+1}`} className="w-full h-full object-cover" />
                         <button
                           type="button"
@@ -985,7 +993,7 @@ function ProductsView({ token }: { token: string }) {
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
-                  className="bg-[#0A0A0A] border-[#2A2A2A] text-white"
+                  className="nb-input bg-[#0A0A0A] border-foreground text-white"
                   disabled={uploading}
                 />
                 {uploading && <span className="text-yellow-400 text-sm">Uploading...</span>}
@@ -995,24 +1003,24 @@ function ProductsView({ token }: { token: string }) {
 
             <div className="space-y-2 sm:col-span-2">
               <Label className="text-white">Description</Label>
-              <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Product description" rows={3} className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Product description" rows={3} className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label className="text-white">Description (Bengali)</Label>
-              <Textarea value={formDescBN} onChange={(e) => setFormDescBN(e.target.value)} placeholder="বাংলায় বিবরণ" rows={3} className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Textarea value={formDescBN} onChange={(e) => setFormDescBN(e.target.value)} placeholder="বাংলায় বিবরণ" rows={3} className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Price (৳) *</Label>
-              <Input type="number" value={formPrice} onChange={(e) => setFormPrice(e.target.value)} placeholder="0" min="0" step="0.01" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input type="number" value={formPrice} onChange={(e) => setFormPrice(e.target.value)} placeholder="0" min="0" step="0.01" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Sale Price (৳)</Label>
-              <Input type="number" value={formSalePrice} onChange={(e) => setFormSalePrice(e.target.value)} placeholder="0" min="0" step="0.01" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input type="number" value={formSalePrice} onChange={(e) => setFormSalePrice(e.target.value)} placeholder="0" min="0" step="0.01" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Category *</Label>
               <Select value={formCategory} onValueChange={setFormCategory}>
-                <SelectTrigger className="w-full bg-[#0A0A0A] border-[#2A2A2A] text-white">
+                <SelectTrigger className="w-full nb-input bg-[#0A0A0A] border-foreground text-white">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1024,16 +1032,16 @@ function ProductsView({ token }: { token: string }) {
             </div>
             <div className="space-y-2">
               <Label className="text-white">Stock</Label>
-              <Input type="number" value={formStock} onChange={(e) => setFormStock(e.target.value)} min="0" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input type="number" value={formStock} onChange={(e) => setFormStock(e.target.value)} min="0" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">SKU</Label>
-              <Input value={formSku} onChange={(e) => setFormSku(e.target.value)} placeholder="SKU-001" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input value={formSku} onChange={(e) => setFormSku(e.target.value)} placeholder="SKU-001" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Unit</Label>
               <Select value={formUnit} onValueChange={setFormUnit}>
-                <SelectTrigger className="w-full bg-[#0A0A0A] border-[#2A2A2A] text-white">
+                <SelectTrigger className="w-full nb-input bg-[#0A0A0A] border-foreground text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1048,7 +1056,7 @@ function ProductsView({ token }: { token: string }) {
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label className="text-white">Tags (comma-separated)</Label>
-              <Input value={formTags} onChange={(e) => setFormTags(e.target.value)} placeholder="organic, fresh, local" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input value={formTags} onChange={(e) => setFormTags(e.target.value)} placeholder="organic, fresh, local" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={formFeatured} onCheckedChange={setFormFeatured} />
@@ -1061,8 +1069,8 @@ function ProductsView({ token }: { token: string }) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowModal(false); resetForm() }} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+            <Button variant="outline" onClick={() => { setShowModal(false); resetForm() }} className="border-foreground/30 text-gray-300 hover:bg-[#222]">Cancel</Button>
+            <Button onClick={handleSave} disabled={saving} className="nb-btn bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] disabled:opacity-50">
               {saving ? 'Saving...' : editProduct ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
@@ -1071,13 +1079,13 @@ function ProductsView({ token }: { token: string }) {
 
       {/* Delete Confirmation */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="bg-[#1A1A1A] border-[#2A2A2A]">
+        <DialogContent className="bg-[#1A1A1A] border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)]">
           <DialogHeader>
-            <DialogTitle className="text-white">Delete Product</DialogTitle>
+            <DialogTitle className="text-white font-black">Delete Product</DialogTitle>
             <DialogDescription className="text-gray-400">Are you sure you want to delete this product? This action cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">Cancel</Button>
             <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</Button>
           </DialogFooter>
         </DialogContent>
@@ -1229,22 +1237,22 @@ function CategoriesView({ token }: { token: string }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Categories</h2>
-        <Button onClick={openAddModal} style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+        <h2 className="text-2xl font-black text-white">Categories</h2>
+        <Button onClick={openAddModal} className="nb-btn bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]">
           <PlusIcon className="w-4 h-4 mr-2" /> Add Category
         </Button>
       </div>
 
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+      <div className="bg-[#1A1A1A] rounded-xl border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
-              <TableHead className="text-gray-400">Icon</TableHead>
-              <TableHead className="text-gray-400">Name</TableHead>
-              <TableHead className="text-gray-400">Slug</TableHead>
-              <TableHead className="text-gray-400">Products</TableHead>
-              <TableHead className="text-gray-400">Status</TableHead>
-              <TableHead className="text-gray-400">Actions</TableHead>
+            <TableRow className="border-b-[2px] border-foreground/30 hover:bg-transparent">
+              <TableHead className="text-gray-400 font-bold">Icon</TableHead>
+              <TableHead className="text-gray-400 font-bold">Name</TableHead>
+              <TableHead className="text-gray-400 font-bold">Slug</TableHead>
+              <TableHead className="text-gray-400 font-bold">Products</TableHead>
+              <TableHead className="text-gray-400 font-bold">Status</TableHead>
+              <TableHead className="text-gray-400 font-bold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1254,7 +1262,7 @@ function CategoriesView({ token }: { token: string }) {
               </TableRow>
             ) : (
               categories.map((cat) => (
-                <TableRow key={cat.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+                <TableRow key={cat.id} className="border-b-[2px] border-foreground/20 hover:bg-[#222]">
                   <TableCell>
                     <div className="w-10 h-10 rounded-lg bg-[#0A0A0A] flex items-center justify-center">
                       {cat.icon ? (
@@ -1274,9 +1282,9 @@ function CategoriesView({ token }: { token: string }) {
                   <TableCell className="text-gray-300">{cat._count?.products ?? 0}</TableCell>
                   <TableCell>
                     {cat.active ? (
-                      <Badge variant="outline" className="bg-[#FFD700]/10 text-[#FFD700] border-[#FFD700]/30">Active</Badge>
+                      <span className="nb-badge bg-[#4ECDC4]/20 text-[#4ECDC4]">Active</span>
                     ) : (
-                      <Badge variant="outline" className="bg-gray-800 text-gray-400 border-gray-600">Inactive</Badge>
+                      <span className="nb-badge bg-gray-800 text-gray-400">Inactive</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -1298,9 +1306,9 @@ function CategoriesView({ token }: { token: string }) {
 
       {/* Add/Edit Category Modal */}
       <Dialog open={showModal} onOpenChange={(open) => { if (!open) { setShowModal(false); resetForm() } }}>
-        <DialogContent className="bg-[#1A1A1A] border-[#2A2A2A]">
+        <DialogContent className="bg-[#1A1A1A] border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)]">
           <DialogHeader>
-            <DialogTitle className="text-white">{editCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
+            <DialogTitle className="text-white font-black">{editCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
             <DialogDescription className="text-gray-400">
               {editCategory ? 'Update category details.' : 'Create a new product category.'}
             </DialogDescription>
@@ -1313,19 +1321,19 @@ function CategoriesView({ token }: { token: string }) {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label className="text-white">Name *</Label>
-              <Input value={formName} onChange={(e) => { setFormName(e.target.value); if (!editCategory) setFormSlug(generateSlug(e.target.value)) }} placeholder="Category name" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input value={formName} onChange={(e) => { setFormName(e.target.value); if (!editCategory) setFormSlug(generateSlug(e.target.value)) }} placeholder="Category name" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Name (Bengali)</Label>
-              <Input value={formNameBN} onChange={(e) => setFormNameBN(e.target.value)} placeholder="বাংলায় নাম" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input value={formNameBN} onChange={(e) => setFormNameBN(e.target.value)} placeholder="বাংলায় নাম" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Slug</Label>
-              <Input value={formSlug} onChange={(e) => setFormSlug(e.target.value)} placeholder="category-slug" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input value={formSlug} onChange={(e) => setFormSlug(e.target.value)} placeholder="category-slug" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Sort Order</Label>
-              <Input type="number" value={formSortOrder} onChange={(e) => setFormSortOrder(e.target.value)} min="0" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+              <Input type="number" value={formSortOrder} onChange={(e) => setFormSortOrder(e.target.value)} min="0" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={formActive} onCheckedChange={setFormActive} />
@@ -1334,8 +1342,8 @@ function CategoriesView({ token }: { token: string }) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowModal(false); resetForm() }} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+            <Button variant="outline" onClick={() => { setShowModal(false); resetForm() }} className="border-foreground/30 text-gray-300 hover:bg-[#222]">Cancel</Button>
+            <Button onClick={handleSave} disabled={saving} className="nb-btn bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] disabled:opacity-50">
               {saving ? 'Saving...' : editCategory ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
@@ -1344,13 +1352,13 @@ function CategoriesView({ token }: { token: string }) {
 
       {/* Delete Confirmation */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="bg-[#1A1A1A] border-[#2A2A2A]">
+        <DialogContent className="bg-[#1A1A1A] border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)]">
           <DialogHeader>
-            <DialogTitle className="text-white">Delete Category</DialogTitle>
+            <DialogTitle className="text-white font-black">Delete Category</DialogTitle>
             <DialogDescription className="text-gray-400">Are you sure? Categories with products cannot be deleted.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">Cancel</Button>
             <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</Button>
           </DialogFooter>
         </DialogContent>
@@ -1429,9 +1437,9 @@ function OrdersView({ token }: { token: string }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="text-2xl font-bold text-white">Orders</h2>
+        <h2 className="text-2xl font-black text-white">Orders</h2>
         <Select value={statusFilter || 'all'} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
-          <SelectTrigger className="w-40 bg-[#0A0A0A] border-[#2A2A2A] text-white">
+          <SelectTrigger className="w-40 nb-input bg-[#0A0A0A] border-foreground text-white">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -1446,17 +1454,17 @@ function OrdersView({ token }: { token: string }) {
         </Select>
       </div>
 
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+      <div className="bg-[#1A1A1A] rounded-xl border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
-              <TableHead className="text-gray-400">Order ID</TableHead>
-              <TableHead className="text-gray-400">Customer</TableHead>
-              <TableHead className="text-gray-400">Items</TableHead>
-              <TableHead className="text-gray-400">Total</TableHead>
-              <TableHead className="text-gray-400">Status</TableHead>
-              <TableHead className="text-gray-400">Date</TableHead>
-              <TableHead className="text-gray-400">Actions</TableHead>
+            <TableRow className="border-b-[2px] border-foreground/30 hover:bg-transparent">
+              <TableHead className="text-gray-400 font-bold">Order ID</TableHead>
+              <TableHead className="text-gray-400 font-bold">Customer</TableHead>
+              <TableHead className="text-gray-400 font-bold">Items</TableHead>
+              <TableHead className="text-gray-400 font-bold">Total</TableHead>
+              <TableHead className="text-gray-400 font-bold">Status</TableHead>
+              <TableHead className="text-gray-400 font-bold">Date</TableHead>
+              <TableHead className="text-gray-400 font-bold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1466,7 +1474,7 @@ function OrdersView({ token }: { token: string }) {
               </TableRow>
             ) : (
               orders.map((order) => (
-                <TableRow key={order.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+                <TableRow key={order.id} className="border-b-[2px] border-foreground/20 hover:bg-[#222]">
                   <TableCell className="font-mono text-xs text-white">{order.id.slice(-8)}</TableCell>
                   <TableCell className="text-white">{order.user?.name || order.user?.email || 'N/A'}</TableCell>
                   <TableCell className="text-gray-300">{order.orderItems?.length ?? 0}</TableCell>
@@ -1477,7 +1485,7 @@ function OrdersView({ token }: { token: string }) {
                       onValueChange={(v) => updateStatus(order.id, v)}
                       disabled={updating === order.id}
                     >
-                      <SelectTrigger className="w-32 h-8 text-xs bg-[#0A0A0A] border-[#2A2A2A] text-white">
+                      <SelectTrigger className="w-32 h-8 text-xs nb-input bg-[#0A0A0A] border-foreground text-white">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1503,13 +1511,13 @@ function OrdersView({ token }: { token: string }) {
         </Table>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A2A2A]">
+          <div className="flex items-center justify-between px-4 py-3 border-t-[2px] border-foreground/20">
             <p className="text-sm text-gray-400">Page {page} of {totalPages}</p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">
                 <ChevronLeftIcon className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">
                 <ChevronRightIcon className="w-4 h-4" />
               </Button>
             </div>
@@ -1519,9 +1527,9 @@ function OrdersView({ token }: { token: string }) {
 
       {/* Order Detail Modal */}
       <Dialog open={!!detailOrder} onOpenChange={() => setDetailOrder(null)}>
-        <DialogContent className="sm:max-w-lg bg-[#1A1A1A] border-[#2A2A2A]">
+        <DialogContent className="sm:max-w-lg bg-[#1A1A1A] border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)]">
           <DialogHeader>
-            <DialogTitle className="text-white">Order Details</DialogTitle>
+            <DialogTitle className="text-white font-black">Order Details</DialogTitle>
             <DialogDescription className="text-gray-400">Order #{detailOrder?.id.slice(-8)}</DialogDescription>
           </DialogHeader>
           {detailOrder && (
@@ -1555,7 +1563,7 @@ function OrdersView({ token }: { token: string }) {
                 )}
               </div>
 
-              <div className="border-t border-[#2A2A2A] pt-4">
+              <div className="border-t-[2px] border-foreground/20 pt-4">
                 <p className="text-sm font-medium text-gray-400 mb-2">Order Items</p>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {detailOrder.orderItems?.map((item) => (
@@ -1573,7 +1581,7 @@ function OrdersView({ token }: { token: string }) {
                 </div>
               </div>
 
-              <div className="border-t border-[#2A2A2A] pt-4 flex justify-between items-center">
+              <div className="border-t-[2px] border-foreground/20 pt-4 flex justify-between items-center">
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(detailOrder.status)}`}>
                   {detailOrder.status}
                 </span>
@@ -1631,11 +1639,11 @@ function UsersView({ token }: { token: string }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="text-2xl font-bold text-white">Users</h2>
+        <h2 className="text-2xl font-black text-white">Users</h2>
         <div className="relative">
           <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <Input
-            className="pl-9 w-64 bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500"
+            className="pl-9 w-64 nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500"
             placeholder="Search by name or email..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
@@ -1643,16 +1651,16 @@ function UsersView({ token }: { token: string }) {
         </div>
       </div>
 
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+      <div className="bg-[#1A1A1A] rounded-xl border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
-              <TableHead className="text-gray-400">User</TableHead>
-              <TableHead className="text-gray-400">Email</TableHead>
-              <TableHead className="text-gray-400">Phone</TableHead>
-              <TableHead className="text-gray-400">Role</TableHead>
-              <TableHead className="text-gray-400">Orders</TableHead>
-              <TableHead className="text-gray-400">Joined</TableHead>
+            <TableRow className="border-b-[2px] border-foreground/30 hover:bg-transparent">
+              <TableHead className="text-gray-400 font-bold">User</TableHead>
+              <TableHead className="text-gray-400 font-bold">Email</TableHead>
+              <TableHead className="text-gray-400 font-bold">Phone</TableHead>
+              <TableHead className="text-gray-400 font-bold">Role</TableHead>
+              <TableHead className="text-gray-400 font-bold">Orders</TableHead>
+              <TableHead className="text-gray-400 font-bold">Joined</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1662,7 +1670,7 @@ function UsersView({ token }: { token: string }) {
               </TableRow>
             ) : (
               users.map((user) => (
-                <TableRow key={user.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+                <TableRow key={user.id} className="border-b-[2px] border-foreground/20 hover:bg-[#222]">
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium" style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
@@ -1674,7 +1682,7 @@ function UsersView({ token }: { token: string }) {
                   <TableCell className="text-gray-300">{user.email}</TableCell>
                   <TableCell className="text-gray-300">{user.phone || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={user.role === 'admin' ? 'bg-[#FFD700]/10 text-[#FFD700] border-[#FFD700]/30' : 'bg-gray-800 text-gray-400 border-gray-600'}>
+                    <Badge variant="outline" className={user.role === 'admin' ? 'nb-badge bg-[#FFD700]/20 text-[#FFD700]' : 'nb-badge bg-gray-800 text-gray-400'}>
                       {user.role}
                     </Badge>
                   </TableCell>
@@ -1687,13 +1695,13 @@ function UsersView({ token }: { token: string }) {
         </Table>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A2A2A]">
+          <div className="flex items-center justify-between px-4 py-3 border-t-[2px] border-foreground/20">
             <p className="text-sm text-gray-400">Page {page} of {totalPages}</p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">
                 <ChevronLeftIcon className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">
                 <ChevronRightIcon className="w-4 h-4" />
               </Button>
             </div>
@@ -1750,9 +1758,9 @@ function UserLogsView({ token }: { token: string }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="text-2xl font-bold text-white">User Logs</h2>
+        <h2 className="text-2xl font-black text-white">User Logs</h2>
         <Select value={actionFilter || 'all'} onValueChange={(v) => { setActionFilter(v === 'all' ? '' : v); setPage(1) }}>
-          <SelectTrigger className="w-44 bg-[#0A0A0A] border-[#2A2A2A] text-white">
+          <SelectTrigger className="w-44 nb-input bg-[#0A0A0A] border-foreground text-white">
             <SelectValue placeholder="Filter by action" />
           </SelectTrigger>
           <SelectContent>
@@ -1764,15 +1772,15 @@ function UserLogsView({ token }: { token: string }) {
         </Select>
       </div>
 
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+      <div className="bg-[#1A1A1A] rounded-xl border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
-              <TableHead className="text-gray-400">Timestamp</TableHead>
-              <TableHead className="text-gray-400">User</TableHead>
-              <TableHead className="text-gray-400">Action</TableHead>
-              <TableHead className="text-gray-400">Details</TableHead>
-              <TableHead className="text-gray-400">IP</TableHead>
+            <TableRow className="border-b-[2px] border-foreground/30 hover:bg-transparent">
+              <TableHead className="text-gray-400 font-bold">Timestamp</TableHead>
+              <TableHead className="text-gray-400 font-bold">User</TableHead>
+              <TableHead className="text-gray-400 font-bold">Action</TableHead>
+              <TableHead className="text-gray-400 font-bold">Details</TableHead>
+              <TableHead className="text-gray-400 font-bold">IP</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1782,11 +1790,11 @@ function UserLogsView({ token }: { token: string }) {
               </TableRow>
             ) : (
               logs.map((log) => (
-                <TableRow key={log.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+                <TableRow key={log.id} className="border-b-[2px] border-foreground/20 hover:bg-[#222]">
                   <TableCell className="text-xs text-gray-500 whitespace-nowrap">{formatDate(log.createdAt)}</TableCell>
                   <TableCell className="text-white">{log.user?.name || log.user?.email || 'System'}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-[#FFD700]/10 text-[#FFD700] border-[#FFD700]/30 text-xs">
+                    <Badge variant="outline" className="nb-badge bg-[#FFD700]/20 text-[#FFD700] text-xs">
                       {log.action}
                     </Badge>
                   </TableCell>
@@ -1799,18 +1807,314 @@ function UserLogsView({ token }: { token: string }) {
         </Table>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A2A2A]">
+          <div className="flex items-center justify-between px-4 py-3 border-t-[2px] border-foreground/20">
             <p className="text-sm text-gray-400">Page {page} of {totalPages}</p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">
                 <ChevronLeftIcon className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-foreground/30 text-gray-300 hover:bg-[#222]">
                 <ChevronRightIcon className="w-4 h-4" />
               </Button>
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Chat Tab (Admin)
+// ═══════════════════════════════════════════════════════════════
+
+interface AdminChatMessage {
+  id: string
+  senderId: string
+  receiverId: string | null
+  message: string
+  read: boolean
+  createdAt: string
+  senderType?: string
+  senderName?: string
+}
+
+interface AdminChatConversation {
+  otherUserId: string
+  otherUserName: string
+  otherUserAvatar: string | null
+  lastMessage: string
+  lastMessageTime: string
+  unreadCount: number
+  senderType: string
+}
+
+function ChatTab({ token }: { token: string }) {
+  const [conversations, setConversations] = useState<AdminChatConversation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [messages, setMessages] = useState<AdminChatMessage[]>([])
+  const [messagesLoading, setMessagesLoading] = useState(false)
+  const [newMessage, setNewMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Fetch all conversations (admin sees all)
+  const fetchConversations = useCallback(async () => {
+    try {
+      const res = await adminFetch('/api/chat?action=conversations&userId=admin', token)
+      if (res.ok) {
+        const data = await res.json()
+        setConversations(data.conversations || [])
+      }
+    } catch {
+      // handled
+    } finally {
+      setLoading(false)
+    }
+  }, [token])
+
+  useEffect(() => {
+    fetchConversations()
+  }, [fetchConversations])
+
+  // Fetch messages for selected conversation
+  const fetchMessages = useCallback(async (userId: string) => {
+    setMessagesLoading(true)
+    try {
+      const res = await adminFetch(`/api/chat?senderId=${userId}&userId=admin`, token)
+      if (res.ok) {
+        const data = await res.json()
+        setMessages(data.messages || [])
+      }
+    } catch {
+      // handled
+    } finally {
+      setMessagesLoading(false)
+    }
+  }, [token])
+
+  useEffect(() => {
+    if (selectedUserId) {
+      fetchMessages(selectedUserId)
+    }
+  }, [selectedUserId, fetchMessages])
+
+  // Auto-scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Mark as read
+  useEffect(() => {
+    if (selectedUserId && messages.length > 0) {
+      const unread = messages.filter(m => m.senderId === selectedUserId && !m.read)
+      if (unread.length > 0) {
+        adminFetch('/api/chat', token, {
+          method: 'PUT',
+          body: JSON.stringify({ action: 'mark_read', senderId: selectedUserId, receiverId: 'admin' }),
+        }).catch(() => {})
+      }
+    }
+  }, [messages, selectedUserId, token])
+
+  const handleSend = async () => {
+    if (!newMessage.trim() || !selectedUserId || sending) return
+    setSending(true)
+    try {
+      const res = await adminFetch('/api/chat', token, {
+        method: 'POST',
+        body: JSON.stringify({
+          senderId: 'admin',
+          receiverId: selectedUserId,
+          message: newMessage.trim(),
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setMessages(prev => {
+          if (prev.some(m => m.id === data.message.id)) return prev
+          return [...prev, data.message]
+        })
+        setNewMessage('')
+      }
+    } catch {
+      // handled
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-32 bg-[#1A1A1A]" />
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 rounded-lg bg-[#1A1A1A]" />)}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-black text-white">Chat</h2>
+
+      <div className="nb-card-static bg-[#1A1A1A] flex flex-col lg:flex-row h-[calc(100vh-14rem)] overflow-hidden">
+        {/* Conversation List */}
+        <div className="w-full lg:w-80 border-r-[3px] border-foreground shrink-0 flex flex-col">
+          <div className="p-4 border-b-[3px] border-foreground bg-[#FFD700]/10">
+            <h3 className="text-sm font-black text-white">CONVERSATIONS</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto max-h-96 lg:max-h-none">
+            {conversations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3 border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] bg-[#FFD700]/10">
+                  <ChatIcon className="w-6 h-6 text-[#FFD700]" />
+                </div>
+                <p className="text-sm text-gray-400 font-bold">No conversations yet</p>
+              </div>
+            ) : (
+              conversations.map(conv => (
+                <button
+                  key={conv.otherUserId}
+                  onClick={() => setSelectedUserId(conv.otherUserId)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 border-b-[2px] border-foreground/20 hover:bg-[#FFD700]/10 transition-colors text-left ${
+                    selectedUserId === conv.otherUserId
+                      ? 'bg-[#FFD700]/15 border-l-[4px] border-l-[#FFD700]'
+                      : ''
+                  }`}
+                >
+                  <div className="relative shrink-0">
+                    {conv.otherUserAvatar ? (
+                      <img src={conv.otherUserAvatar} alt={conv.otherUserName} className="w-10 h-10 rounded-full object-cover border-[2px] border-foreground" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-[#FFD700]/20 flex items-center justify-center border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]">
+                        <span className="text-[#FFD700] font-black text-xs">
+                          {(conv.otherUserName?.[0]?.toUpperCase() || 'U')}
+                        </span>
+                      </div>
+                    )}
+                    {conv.unreadCount > 0 && (
+                      <span className="nb-badge absolute -top-1 -right-1 bg-[#FF6B9D] text-white text-[9px] min-w-[16px] h-[16px] px-0.5">
+                        {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-extrabold text-white truncate">{conv.otherUserName}</h4>
+                      <span className="text-[10px] text-gray-500 shrink-0 ml-2 font-bold">
+                        {formatDate(conv.lastMessageTime).split(',')[0]}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 truncate mt-0.5">{conv.lastMessage}</p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Message Area */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {selectedUserId ? (
+            <>
+              {/* Chat header */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b-[3px] border-foreground bg-[#FFD700]/10">
+                <button
+                  onClick={() => setSelectedUserId(null)}
+                  className="nb-btn-sm bg-card text-white lg:hidden"
+                >
+                  <ChevronLeftIcon className="w-4 h-4" />
+                </button>
+                <div className="w-8 h-8 rounded-full bg-[#4ECDC4]/20 flex items-center justify-center border-[2px] border-foreground">
+                  <span className="text-[#4ECDC4] font-black text-xs">
+                    {(conversations.find(c => c.otherUserId === selectedUserId)?.otherUserName?.[0]?.toUpperCase() || 'U')}
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-white">
+                  {conversations.find(c => c.otherUserId === selectedUserId)?.otherUserName || selectedUserId.slice(-8)}
+                </h3>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {messagesLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="w-8 h-8 border-4 border-gray-700 rounded-full animate-spin" style={{ borderTopColor: '#FFD700' }} />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3 border-[2px] border-foreground shadow-[3px_3px_0px_var(--foreground)] bg-[#FFD700]/10">
+                      <ChatIcon className="w-7 h-7 text-[#FFD700]" />
+                    </div>
+                    <p className="text-sm text-gray-400 font-black">No messages yet</p>
+                  </div>
+                ) : (
+                  messages.map(msg => {
+                    const isAdmin = msg.senderId === 'admin' || msg.senderType === 'admin'
+                    return (
+                      <div key={msg.id} className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
+                        <span className="text-[10px] text-gray-500 font-bold mb-0.5">
+                          {isAdmin ? 'You (Admin)' : msg.senderName || 'Customer'}
+                        </span>
+                        <div
+                          className={`max-w-[80%] px-4 py-2.5 rounded-xl text-sm leading-relaxed font-medium ${
+                            isAdmin
+                              ? 'bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
+                              : 'bg-card text-white border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
+                          }`}
+                        >
+                          <p className="break-words">{msg.message}</p>
+                        </div>
+                        <span className="text-[10px] text-gray-500 font-bold mt-0.5">
+                          {formatDate(msg.createdAt).split(',')[1] || formatDate(msg.createdAt)}
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input */}
+              <div className="border-t-[3px] border-foreground px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={e => setNewMessage(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type a message..."
+                    disabled={sending}
+                    className="nb-input flex-1 px-4 py-3 bg-[#0A0A0A] text-white text-sm placeholder:text-gray-500"
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={sending || !newMessage.trim()}
+                    className="nb-btn-sm bg-[#FFD700] text-[#0A0A0A] disabled:opacity-40"
+                  >
+                    {sending ? '...' : 'SEND'}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] bg-[#FFD700]/10">
+                <ChatIcon className="w-9 h-9 text-[#FFD700]" />
+              </div>
+              <p className="text-lg font-black text-white">Select a Conversation</p>
+              <p className="text-sm text-gray-400 mt-1">Choose a customer chat to start messaging</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -1827,6 +2131,7 @@ const navItems: { key: AdminView; label: string; icon: React.ReactNode }[] = [
   { key: 'orders', label: 'Orders', icon: <ShoppingBagIcon /> },
   { key: 'users', label: 'Users', icon: <UsersIcon /> },
   { key: 'user-logs', label: 'User Logs', icon: <FileTextIcon /> },
+  { key: 'chat' as AdminView, label: 'Chat', icon: <ChatIcon /> },
 ]
 
 function Sidebar({
@@ -1845,14 +2150,14 @@ function Sidebar({
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-6 border-b border-white/10">
+      <div className="p-6 border-b-[3px] border-foreground">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FFD700' }}>
-            <span className="text-[#0A0A0A] text-lg font-bold">BB</span>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]" style={{ backgroundColor: '#FFD700' }}>
+            <span className="text-[#0A0A0A] text-lg font-black">BB</span>
           </div>
           <div>
-            <h1 className="text-white font-bold text-lg">Bangla Bazar</h1>
-            <p className="text-yellow-300 text-xs">Admin Panel</p>
+            <h1 className="text-white font-black text-lg">Bangla Bazar</h1>
+            <p className="text-[#FFD700] text-xs font-bold">Admin Panel</p>
           </div>
         </div>
       </div>
@@ -1863,10 +2168,10 @@ function Sidebar({
           <button
             key={item.key}
             onClick={() => { onViewChange(item.key); onMobileClose() }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all border-[2px] ${
               currentView === item.key
-                ? 'bg-[#FFD700] text-[#0A0A0A]'
-                : 'text-gray-400 hover:bg-white/10 hover:text-white'
+                ? 'bg-[#FFD700] text-[#0A0A0A] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
+                : 'text-gray-400 border-transparent hover:bg-white/10 hover:text-white'
             }`}
           >
             {item.icon}
@@ -1876,10 +2181,10 @@ function Sidebar({
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t-[3px] border-foreground">
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border-[2px] border-transparent hover:border-red-500/30"
         >
           <LogOutIcon />
           Logout
@@ -2017,6 +2322,8 @@ export default function AdminPage() {
         return <UsersView token={auth.adminToken} />
       case 'user-logs':
         return <UserLogsView token={auth.adminToken} />
+      case 'chat':
+        return <ChatTab token={auth.adminToken} />
       default:
         return <DashboardView token={auth.adminToken} />
     }
@@ -2035,26 +2342,26 @@ export default function AdminPage() {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar for mobile */}
-        <header className="sticky top-0 z-40 bg-[#1A1A1A] border-b border-[#2A2A2A] lg:hidden">
+        <header className="sticky top-0 z-40 bg-[#1A1A1A] border-b-[3px] border-foreground shadow-[0_3px_0_0_var(--foreground)] lg:hidden">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={() => setMobileMenuOpen(true)} className="text-gray-400">
+            <button onClick={() => setMobileMenuOpen(true)} className="nb-btn-sm bg-card text-foreground">
               <MenuIcon className="w-6 h-6" />
             </button>
-            <h1 className="font-bold text-white">Bangla Bazar Admin</h1>
+            <h1 className="font-black text-white">Bangla Bazar Admin</h1>
             <div className="w-6" />
           </div>
         </header>
 
         {/* Top bar for desktop */}
-        <header className="hidden lg:flex items-center justify-between px-8 h-16 bg-[#1A1A1A] border-b border-[#2A2A2A]">
+        <header className="hidden lg:flex items-center justify-between px-8 h-16 bg-[#1A1A1A] border-b-[3px] border-foreground shadow-[0_3px_0_0_var(--foreground)]">
           <div>
-            <h2 className="text-lg font-semibold text-white capitalize">{currentView.replace('-', ' ')}</h2>
+            <h2 className="text-lg font-black text-white capitalize">{currentView.replace('-', ' ')}</h2>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium" style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]" style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
               {(auth.adminUser.name || auth.adminUser.email)[0].toUpperCase()}
             </div>
-            <span className="text-sm text-gray-300">{auth.adminUser.name || auth.adminUser.email}</span>
+            <span className="text-sm text-gray-300 font-bold">{auth.adminUser.name || auth.adminUser.email}</span>
           </div>
         </header>
 

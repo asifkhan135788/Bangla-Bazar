@@ -57,7 +57,7 @@ export function CartView() {
         <div className="w-28 h-28 mb-6 flex items-center justify-center nb-card bg-[#FFD700]/10 p-4">
           <ShoppingBag className="h-12 w-12 text-[#FFD700]" />
         </div>
-        <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
+        <h2 className="text-2xl font-heading font-black text-foreground mb-2">
           Your cart is empty
         </h2>
         <p className="text-muted-foreground text-sm mb-6 text-center max-w-xs">
@@ -81,11 +81,11 @@ export function CartView() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b-[3px] border-foreground px-4 py-3"
+        className="sticky top-14 z-10 bg-background border-b-[3px] border-foreground shadow-[0_3px_0_0_var(--foreground)] px-4 py-3"
       >
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-heading font-bold text-foreground">Cart</h1>
+            <h1 className="text-xl font-heading font-black text-foreground">Cart</h1>
             <span className="nb-badge bg-[#FFD700] text-[#0A0A0A]">{itemCount}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -112,10 +112,10 @@ export function CartView() {
       <div className="max-w-7xl mx-auto px-4 mt-3">
         <button
           onClick={toggleSelectAll}
-          className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2"
+          className="flex items-center gap-2 text-sm font-bold text-foreground mb-2"
         >
           {allSelected ? (
-            <CheckSquare className="h-5 w-5 text-[#FFD700]" />
+            <CheckSquare className="h-5 w-5 text-[#4ECDC4]" />
           ) : (
             <Square className="h-5 w-5 text-muted-foreground" />
           )}
@@ -137,7 +137,7 @@ export function CartView() {
                 exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
                 layout
-                className={`nb-card bg-card p-3 mb-3 flex gap-3 ${isSelected ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-background' : ''}`}
+                className={`nb-card bg-card p-3 mb-3 flex gap-3 ${isSelected ? 'ring-2 ring-[#4ECDC4] ring-offset-2 ring-offset-background' : ''}`}
               >
                 {/* Checkbox */}
                 <button
@@ -146,7 +146,7 @@ export function CartView() {
                   aria-label={isSelected ? 'Deselect item' : 'Select item'}
                 >
                   {isSelected ? (
-                    <CheckSquare className="h-5 w-5 text-[#FFD700]" />
+                    <CheckSquare className="h-5 w-5 text-[#4ECDC4]" />
                   ) : (
                     <Square className="h-5 w-5 text-muted-foreground" />
                   )}
@@ -154,7 +154,7 @@ export function CartView() {
 
                 {/* Image */}
                 <div
-                  className="shrink-0 w-20 h-20 rounded-lg overflow-hidden cursor-pointer border-2 border-foreground"
+                  className="shrink-0 w-20 h-20 rounded-lg overflow-hidden cursor-pointer border-[2.5px] border-foreground"
                   onClick={() => navigate('product-detail', { productId: item.productId })}
                 >
                   {item.image ? (
@@ -168,12 +168,12 @@ export function CartView() {
 
                 {/* Details */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-bold text-foreground line-clamp-2 leading-tight">
+                  <h3 className="text-sm font-extrabold text-foreground line-clamp-2 leading-tight">
                     {item.name}
                   </h3>
 
                   <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-sm font-bold text-[#FFD700]">
+                    <span className="text-sm font-black text-[#FFD700]">
                       ৳{effectivePrice.toLocaleString()}
                     </span>
                     {item.salePrice && item.salePrice < item.price && (
@@ -188,18 +188,18 @@ export function CartView() {
                     <div className="flex items-center">
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                        className="w-8 h-8 rounded-l-lg border-2 border-foreground flex items-center justify-center text-foreground hover:bg-[#FFD700]/10 active:translate-y-[1px] transition-all"
+                        className="w-8 h-8 rounded-l-lg border-[2.5px] border-foreground flex items-center justify-center text-foreground hover:bg-[#4ECDC4]/10 active:translate-y-[1px] transition-all bg-card"
                         aria-label="Decrease quantity"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
-                      <span className="w-10 h-8 flex items-center justify-center border-t-2 border-b-2 border-foreground text-sm font-bold text-foreground bg-card">
+                      <span className="w-10 h-8 flex items-center justify-center border-t-[2.5px] border-b-[2.5px] border-foreground text-sm font-black text-foreground bg-card">
                         {item.quantity}
                       </span>
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                         disabled={item.quantity >= item.stock}
-                        className="w-8 h-8 rounded-r-lg border-2 border-foreground flex items-center justify-center text-foreground hover:bg-[#FFD700]/10 active:translate-y-[1px] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="w-8 h-8 rounded-r-lg border-[2.5px] border-foreground flex items-center justify-center text-foreground hover:bg-[#4ECDC4]/10 active:translate-y-[1px] disabled:opacity-40 disabled:cursor-not-allowed transition-all bg-card"
                         aria-label="Increase quantity"
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -207,7 +207,7 @@ export function CartView() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#FFD700]">
+                      <span className="text-sm font-black text-[#FFD700]">
                         ৳{(effectivePrice * item.quantity).toLocaleString()}
                       </span>
                       <button
@@ -215,10 +215,10 @@ export function CartView() {
                           removeItem(item.productId)
                           toast.success('Item removed from cart')
                         }}
-                        className="p-1.5 rounded-lg hover:bg-[#EF4444]/10 transition-colors"
+                        className="nb-btn-sm p-1.5 bg-[#EF4444] text-white"
                         aria-label="Remove item"
                       >
-                        <Trash2 className="h-4 w-4 text-[#EF4444]" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
@@ -240,19 +240,19 @@ export function CartView() {
         <div className="max-w-7xl mx-auto space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Subtotal</span>
-            <span className="font-semibold text-foreground">৳{subtotal.toLocaleString()}</span>
+            <span className="font-bold text-foreground">৳{subtotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Delivery Fee</span>
-            <span className="font-semibold text-foreground">৳{DELIVERY_FEE}</span>
+            <span className="font-bold text-foreground">৳{DELIVERY_FEE}</span>
           </div>
-          <div className="border-t-2 border-foreground pt-2 flex justify-between text-lg font-heading font-bold text-foreground">
+          <div className="nb-divider border-t-[3px] border-foreground pt-2 flex justify-between text-lg font-heading font-black text-foreground">
             <span>Total</span>
-            <span className="text-[#FFD700]">৳{total.toLocaleString()}</span>
+            <span className="text-[#FFD700] font-black">৳{total.toLocaleString()}</span>
           </div>
           <button
             onClick={handleCheckout}
-            className="nb-btn w-full mt-3 py-3.5 bg-[#FFD700] text-[#0A0A0A] text-base"
+            className="nb-btn w-full mt-3 py-3.5 bg-[#FFD700] text-[#0A0A0A] text-base font-black"
           >
             Proceed to Checkout — ৳{total.toLocaleString()}
           </button>
