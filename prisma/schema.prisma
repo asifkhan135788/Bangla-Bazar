@@ -46,7 +46,6 @@ model User {
   role         UserRole      @default(customer)
   banned       Boolean       @default(false)
   bannedUntil  DateTime?     @db.Timestamptz()
-  password     String        @db.Text
   createdAt    DateTime      @default(now()) @db.Timestamptz()
   updatedAt    DateTime      @updatedAt @db.Timestamptz()
 
@@ -228,7 +227,7 @@ model AdminSession {
 model ChatMessage {
   id         String     @id @default(uuid()) @db.Uuid
   senderId   String     @db.Uuid
-  receiverId String?    @db.Text
+  receiverId String?    @db.Uuid
   productId  String?    @db.Uuid
   message    String     @db.Text
   senderType SenderType @default(customer)

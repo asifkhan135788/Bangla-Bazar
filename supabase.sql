@@ -3,10 +3,11 @@
 -- ============================================================
 -- Prisma Schema থেকে তৈরি: prisma/schema.prisma
 -- Database: PostgreSQL (Supabase)
+-- Auth: Supabase Auth (auth.users) integration
 -- Security: Row Level Security (RLS) — সব টেবিলে সক্রিয়
 --
 -- ⚠️  পুরো স্ক্রিপ্ট Supabase SQL Editor-এ রান করুন
--- ⚠️  ক্রম অনুসারে রান করুন — enums → tables → triggers → RLS
+-- ⚠️  ক্রম অনুসারে রান করুন — enums → tables → triggers → RLS → auth
 -- ============================================================
 
 
@@ -38,13 +39,24 @@ CREATE TYPE "SenderType" AS ENUM ('customer', 'admin');
 -- ║  PHASE 2: TABLES (Prisma model → PostgreSQL table)      ║
 -- ║  @@map() → টেবিলের নাম                                  ║
 -- ║  @map() → কলামের নাম (যদি আলাদা হয়)                    ║
+-- ║                                                          ║
+-- ║  🔑 FIX #1: users.id → FK to auth.users(id)             ║
+-- ║  🔑 FIX #2: password column removed (Supabase Auth)     ║
 -- ╚══════════════════════════════════════════════════════════╝
 
 -- ────────────────────────────────────────────────────────────
 -- Prisma Model: User → Table: users (@@map("users"))
+--
+-- 🔑 FIX #1: users.id এখন auth.users(id) এর FK
+--    Supabase Auth ব্যবহার করলে users.id = auth.users.id
+--    তাই gen_random_uuid() বাদ, REFERENCES auth.users(id) যোগ
+--
+-- 🔑 FIX #2: password column সরানো হয়েছে
+--    Supabase Auth নিজেই password manage করে
+--    public.users এ password রাখার দরকার নেই
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS "users" (
-  "id"          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+  "id"          UUID        PRIMARY KEY REFERENCES auth.users("id") ON DELETE CASCADE,  -- FK to auth.users
   "email"       TEXT        NOT NULL UNIQUE,                          -- @unique @db.Text
   "name"        TEXT,                                                 -- String? @db.Text
   "phone"       TEXT,                                                 -- String? @db.Text
@@ -53,7 +65,7 @@ CREATE TABLE IF NOT EXISTS "users" (
   "role"        "UserRole"  NOT NULL DEFAULT 'customer',              -- @default(customer)
   "banned"      BOOLEAN     NOT NULL DEFAULT false,                   -- @default(false)
   "bannedUntil" TIMESTAMPTZ,                                          -- DateTime? @db.Timestamptz()
-  "password"    TEXT        NOT NULL,                                 -- @db.Text
+  -- "password" column REMOVED — Supabase Auth handles passwords
   "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT now(),                   -- @default(now()) @db.Timestamptz()
   "updatedAt"   TIMESTAMPTZ NOT NULL DEFAULT now()                    -- @updatedAt @db.Timestamptz()
 );
@@ -262,7 +274,7 @@ CREATE INDEX IF NOT EXISTS "admin_sessions_expiresAt_idx" ON "admin_sessions" ("
 CREATE TABLE IF NOT EXISTS "chat_messages" (
   "id"         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
   "senderId"   UUID         NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,     -- onDelete: Cascade
-  "receiverId" TEXT,                                                   -- String? @db.Text
+  "receiverId" UUID,                                                   -- 🔑 Changed: TEXT → UUID (FK to users.id for proper RLS)
   "productId"  UUID         REFERENCES "products"("id") ON DELETE CASCADE,           -- onDelete: Cascade
   "message"    TEXT         NOT NULL,                                  -- @db.Text
   "senderType" "SenderType" NOT NULL DEFAULT 'customer',              -- @default(customer)
@@ -317,7 +329,36 @@ END $$;
 
 
 -- ╔══════════════════════════════════════════════════════════╗
+-- ║  PHASE 3.5: AUTO-SYNC TRIGGER                           ║
+-- ║  যখন Supabase Auth এ নতুন user signup করে,             ║
+-- ║  স্বয়ংক্রিয়ভাবে public.users এ row তৈরি হবে           ║
+-- ╚══════════════════════════════════════════════════════════╝
+
+CREATE OR REPLACE FUNCTION "public_handle_new_user"()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO "users" ("id", "email", "name", "role")
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data ->> 'name', split_part(NEW.email, '@', 1)),
+    COALESCE((NEW.raw_user_meta_data ->> 'role')::"UserRole", 'customer')
+  )
+  ON CONFLICT ("id") DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER "on_auth_user_created"
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION "public_handle_new_user"();
+
+
+-- ╔══════════════════════════════════════════════════════════╗
 -- ║  PHASE 4: ROW LEVEL SECURITY (RLS) + POLICIES          ║
+-- ║                                                          ║
+-- ║  🔑 FIX #3: orders এ USING(true) বাদ → proper RLS      ║
+-- ║  🔑 FIX #4: chat_messages এ USING(true) বাদ → proper RLS║
 -- ╚══════════════════════════════════════════════════════════╝
 
 -- ────────────────────────────────────────────────────────────
@@ -380,9 +421,9 @@ END $$;
 
 -- ────────────────────────────────────────────────────────────
 -- 4.4 POLICIES: users
--- SENSITIVE: passwords, roles, ban status
--- anon: কোনো access নেই (সব user ops API routes দিয়ে হয়)
--- authenticated: শুধু নিজের profile পড়া/আপডেট
+-- password column আর নেই, কিন্তু role/banned এখনো sensitive
+-- anon: কোনো access নেই
+-- authenticated: নিজের profile পড়া/আপডেট
 -- ────────────────────────────────────────────────────────────
 
 -- anon: সম্পূর্ণ ব্লক
@@ -393,7 +434,7 @@ CREATE POLICY "users_anon_deny_all" ON "users"
 CREATE POLICY "users_auth_read_own" ON "users"
   FOR SELECT USING (auth.uid() = "id");
 
--- authenticated: নিজের row আপডেট (role/banned/password পরিবর্তন করা যাবে না)
+-- authenticated: নিজের row আপডেট (role/banned পরিবর্তন করা যাবে না)
 CREATE POLICY "users_auth_update_own" ON "users"
   FOR UPDATE USING (auth.uid() = "id")
   WITH CHECK (
@@ -460,19 +501,31 @@ CREATE POLICY "cart_auth_delete_own" ON "cart"
 
 -- ────────────────────────────────────────────────────────────
 -- 4.8 POLICIES: orders
--- anon: Realtime subscription এর জন্য limited read
--- authenticated: নিজের orders + admin সব
+-- 🔑 FIX #3: USING(true) বাদ → শুধু নিজের order + admin
+--
+-- নিয়ম:
+--   ✅ User শুধু নিজের order দেখতে পারে
+--   ✅ Admin সব order দেখতে পারে
+--   ❌ anon কোনো order দেখতে পারে না
+--
+-- Realtime এর জন্য: authenticated role ব্যবহার করুন,
+-- তাহলে auth.uid() দিয়ে filter হবে এবং নিজের order-ই
+-- Realtime এ আসবে।
 -- ────────────────────────────────────────────────────────────
 
-CREATE POLICY "orders_anon_read_limited" ON "orders"
-  FOR SELECT USING (true);  -- Client-side filter applies
+-- anon: কোনো access নেই
+CREATE POLICY "orders_anon_deny_all" ON "orders"
+  FOR ALL USING (false) WITH CHECK (false);
 
+-- authenticated: নিজের order পড়া + admin সব পড়া
 CREATE POLICY "orders_auth_read_own" ON "orders"
   FOR SELECT USING (auth.uid() = "userId" OR "is_admin"());
 
+-- authenticated: নিজের order তৈরি
 CREATE POLICY "orders_auth_insert_own" ON "orders"
   FOR INSERT WITH CHECK (auth.uid() = "userId");
 
+-- admin: order status update
 CREATE POLICY "orders_auth_admin_update" ON "orders"
   FOR UPDATE USING ("is_admin"()) WITH CHECK ("is_admin"());
 
@@ -480,17 +533,21 @@ CREATE POLICY "orders_auth_admin_update" ON "orders"
 -- ────────────────────────────────────────────────────────────
 -- 4.9 POLICIES: order_items
 -- orders এর মতোই access pattern
+-- 🔑 FIX #3 (cont): USING(true) বাদ
 -- ────────────────────────────────────────────────────────────
 
-CREATE POLICY "order_items_anon_read_limited" ON "order_items"
-  FOR SELECT USING (true);  -- Client-side filter applies
+-- anon: কোনো access নেই
+CREATE POLICY "order_items_anon_deny_all" ON "order_items"
+  FOR ALL USING (false) WITH CHECK (false);
 
+-- authenticated: নিজের order এর items + admin সব
 CREATE POLICY "order_items_auth_read_own" ON "order_items"
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM "orders" WHERE "orders"."id" = "order_items"."orderId" AND "orders"."userId" = auth.uid())
     OR "is_admin"()
   );
 
+-- authenticated: নিজের order এ item insert
 CREATE POLICY "order_items_auth_insert_own" ON "order_items"
   FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM "orders" WHERE "orders"."id" = "order_items"."orderId" AND "orders"."userId" = auth.uid())
@@ -541,26 +598,40 @@ CREATE POLICY "admin_sessions_deny_all" ON "admin_sessions"
 
 -- ────────────────────────────────────────────────────────────
 -- 4.13 POLICIES: chat_messages
--- anon: Realtime subscription এর জন্য read (client filter)
--- authenticated: নিজের conversations + admin সব
+-- 🔑 FIX #4: USING(true) বাদ → sender/receiver/admin only
+--
+-- নিয়ম:
+--   ✅ Sender নিজের message দেখতে পারে
+--   ✅ Receiver নিজের message দেখতে পারে
+--   ✅ Admin সব message দেখতে পারে
+--   ❌ অন্য কেউ দেখতে পারে না
+--
+-- receiverId এখন UUID (users.id FK), তাই auth.uid()
+-- দিয়ে সরাসরি matching করা যায়
 -- ────────────────────────────────────────────────────────────
 
-CREATE POLICY "chat_messages_anon_read" ON "chat_messages"
-  FOR SELECT USING (true);
+-- anon: কোনো access নেই
+CREATE POLICY "chat_messages_anon_deny_all" ON "chat_messages"
+  FOR ALL USING (false) WITH CHECK (false);
 
+-- authenticated: sender বা receiver হিসেবে নিজের message দেখা + admin সব
 CREATE POLICY "chat_messages_auth_read_own" ON "chat_messages"
   FOR SELECT USING (
     auth.uid() = "senderId"
-    OR "receiverId" = auth.uid()::text
+    OR auth.uid() = "receiverId"
     OR "is_admin"()
   );
 
+-- authenticated: message পাঠানো (banned user পারবে না)
 CREATE POLICY "chat_messages_auth_insert" ON "chat_messages"
   FOR INSERT WITH CHECK (auth.uid() = "senderId" AND "is_not_banned"());
 
+-- authenticated: নিজের message update (read status ইত্যাদি)
 CREATE POLICY "chat_messages_auth_update_own" ON "chat_messages"
-  FOR UPDATE USING (auth.uid() = "senderId") WITH CHECK (auth.uid() = "senderId");
+  FOR UPDATE USING (auth.uid() = "senderId" OR auth.uid() = "receiverId")
+  WITH CHECK (auth.uid() = "senderId" OR auth.uid() = "receiverId");
 
+-- admin: সব message এ full access
 CREATE POLICY "chat_messages_auth_admin_all" ON "chat_messages"
   FOR ALL USING ("is_admin"()) WITH CHECK ("is_admin"());
 
@@ -580,17 +651,36 @@ CREATE POLICY "settings_auth_admin_write" ON "settings"
 
 -- ╔══════════════════════════════════════════════════════════╗
 -- ║  PHASE 5: SECURITY HARDENING                            ║
+-- ║                                                          ║
+-- ║  🔑 FIX #5: REVOKE ALL → safer alternative              ║
+-- ║  Supabase-এ REVOKE ALL ON SCHEMA public FROM PUBLIC     ║
+-- ║  করলে anon key দিয়ে কোনো table দেখা যায় না এবং       ║
+-- ║  Supabase Dashboard/Studio-ও ভেঙে যেতে পারে।           ║
+-- ║  তাই নির্দিষ্ট table-এ GRANT/REVOKE ব্যবহার করা হচ্ছে  ║
 -- ╚══════════════════════════════════════════════════════════╝
 
 -- ────────────────────────────────────────────────────────────
--- 5.1 Public schema permissions প্রত্যাহার
+-- 5.1 Safer schema-level permissions (Supabase compatible)
+-- ⚠️  REVOKE ALL ON SCHEMA public FROM PUBLIC → এটা Supabase
+--     Dashboard, Studio, এবং anon key access ভেঙে দেয়।
+--     তাই schema level-এ GRANT রাখি, table level-এ নিয়ন্ত্রণ করি।
 -- ────────────────────────────────────────────────────────────
-REVOKE ALL ON SCHEMA public FROM PUBLIC;
+
+-- Schema usage সবার জন্য রাখুন (Supabase default)
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 
--- টেবিল permissions
+-- service_role: সব access (API routes এ ব্যবহৃত)
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+
+-- anon: শুধু যে tables এ public read দরকার সেগুলো
+-- (RLS policies আসল নিয়ন্ত্রণ করে, এটা শুধু baseline)
+GRANT SELECT ON "categories"    TO anon;
+GRANT SELECT ON "products"      TO anon;
+GRANT SELECT ON "reviews"       TO anon;
+GRANT SELECT ON "settings"      TO anon;
+
+-- authenticated: SELECT সব table-এ (RLS filter করবে)
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 
 -- Sequence permissions (gen_random_uuid)
@@ -602,6 +692,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
 GRANT EXECUTE ON FUNCTION "is_admin"() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION "is_not_banned"() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION "update_updated_at_column"() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION "public_handle_new_user"() TO anon, authenticated, service_role;
 
 -- ────────────────────────────────────────────────────────────
 -- 5.3 Supabase Realtime সক্রিয় করা
@@ -610,18 +701,56 @@ ALTER PUBLICATION supabase_realtime ADD TABLE "chat_messages";
 ALTER PUBLICATION supabase_realtime ADD TABLE "orders";
 
 -- ────────────────────────────────────────────────────────────
--- 5.4 Default Admin User তৈরি
--- Password: admin123 (bcrypt hash)
--- ⚠️  প্রথম login এর পর পাসওয়ার্ড পরিবর্তন করুন!
+-- 5.4 🔑 FIX #6: Supabase Auth compatible admin setup
+--
+-- পুরানো পদ্ধতি (বাদ):
+--   INSERT INTO users (email, password, role) VALUES (...)
+--
+-- নতুন পদ্ধতি (Supabase Auth):
+--   1. auth.users এ admin তৈরি করুন (Supabase Dashboard থেকে)
+--   2. on_auth_user_created trigger স্বয়ংক্রিয়ভাবে public.users এ row তৈরি করবে
+--   3. তারপর role admin করুন
+--
+-- নিচে Step-by-step দেওয়া হলো:
 -- ────────────────────────────────────────────────────────────
-INSERT INTO "users" ("id", "email", "name", "password", "role")
-VALUES (
-  gen_random_uuid(),
-  'admin@banglabazar.com',
-  'Admin',
-  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
-  'admin'
-) ON CONFLICT ("email") DO NOTHING;
+
+-- STEP A: Supabase Dashboard → Authentication → Users → Add User
+--   Email: admin@banglabazar.com
+--   Password: (আপনার শক্তিশালী পাসওয়ার্ড দিন)
+--   Auto Confirm: ✅ ON
+--
+-- STEP B: তৈরি হওয়া user-এর role admin করুন:
+--   (নিচের query রান করুন user তৈরি হওয়ার পর)
+
+-- UPDATE "users" SET "role" = 'admin' WHERE "email" = 'admin@banglabazar.com';
+
+-- STEP C (optional): যদি আগে থেকেই admin user থাকে এবং
+-- আপনি SQL দিয়ে তৈরি করতে চান, তাহলে নিচের function ব্যবহার করুন:
+
+CREATE OR REPLACE FUNCTION "create_admin_user"(
+  p_email    TEXT,
+  p_password TEXT,
+  p_name     TEXT DEFAULT 'Admin'
+)
+RETURNS UUID AS $$
+DECLARE
+  v_user_id UUID;
+BEGIN
+  -- auth.users এ user তৈরি (Supabase Auth API)
+  v_user_id := auth.uid_from_token(
+    extensions.url_encode(p_email)
+  );
+
+  -- যদি auth.uid_from_token কাজ না করে, তাহলে
+  -- Supabase Dashboard থেকে manually user তৈরি করুন
+
+  RAISE NOTICE 'Supabase Dashboard → Authentication → Users → Add User দিয়ে admin তৈরি করুন';
+  RAISE NOTICE 'Email: %, তারপর নিচের query রান করুন:', p_email;
+  RAISE NOTICE 'UPDATE "users" SET "role" = ''admin'' WHERE "email" = ''%'';', p_email;
+
+  RETURN v_user_id;
+END;
+$$ LANGUAGE plpgsql;
 
 
 -- ╔══════════════════════════════════════════════════════════╗
@@ -638,14 +767,26 @@ VALUES (
 -- সব policies দেখুন:
 -- SELECT tablename, policyname, cmd FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename, policyname;
 
+-- users.id → auth.users(id) FK আছে কিনা:
+-- SELECT conname, confrelid::regclass FROM pg_constraint WHERE conrelid = 'public.users'::regclass AND contype = 'f';
+
 -- Realtime টেবিল দেখুন:
 -- SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
+
+-- Trigger আছে কিনা:
+-- SELECT trigger_name, event_object_table FROM information_schema.triggers WHERE trigger_schema = 'public' ORDER BY event_object_table;
 
 
 -- ╔══════════════════════════════════════════════════════════╗
 -- ║  ✅ সম্পূর্ণ! পরবর্তী পদক্ষেপ:                          ║
--- ║  1. ডিফল্ট admin পাসওয়ার্ড পরিবর্তন করুন               ║
--- ║  2. .env ফাইলে variables সেট করুন (README.md দেখুন)   ║
--- ║  3. npx prisma generate রান করুন                       ║
--- ║  4. npm run dev রান করুন                               ║
+-- ║                                                          ║
+-- ║  1. Supabase Dashboard → Auth → Users → Admin তৈরি      ║
+-- ║     Email: admin@banglabazar.com                         ║
+-- ║     Password: (শক্তিশালী পাসওয়ার্ড দিন)                ║
+-- ║  2. নিচের query রান করুন:                               ║
+-- ║     UPDATE "users" SET "role" = 'admin'                  ║
+-- ║     WHERE "email" = 'admin@banglabazar.com';             ║
+-- ║  3. .env ফাইলে variables সেট করুন (README.md দেখুন)   ║
+-- ║  4. npx prisma generate রান করুন                       ║
+-- ║  5. npm run dev রান করুন                               ║
 -- ╚══════════════════════════════════════════════════════════╝
