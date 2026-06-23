@@ -91,7 +91,7 @@ model Product {
   descriptionBN String?      @db.Text
   price         Decimal      @db.Decimal(10, 2)
   salePrice     Decimal?     @db.Decimal(10, 2)
-  categoryId    String       @db.Uuid @map("category")
+  categoryId    String       @db.Uuid
   images        String[]     @default([])
   stock         Int          @default(0)
   featured      Boolean      @default(false)

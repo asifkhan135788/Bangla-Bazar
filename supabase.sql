@@ -40,23 +40,23 @@ CREATE TYPE "SenderType" AS ENUM ('customer', 'admin');
 -- ║  @@map() → টেবিলের নাম                                  ║
 -- ║  @map() → কলামের নাম (যদি আলাদা হয়)                    ║
 -- ║                                                          ║
--- ║  🔑 FIX #1: users.id → FK to auth.users(id)             ║
+-- ║  🔑 Uses gen_random_uuid() — no auth.users FK (custom auth) ║
 -- ║  🔑 password column retained (custom bcrypt auth)      ║
 -- ╚══════════════════════════════════════════════════════════╝
 
 -- ────────────────────────────────────────────────────────────
 -- Prisma Model: User → Table: users (@@map("users"))
 --
--- 🔑 FIX #1: users.id এখন auth.users(id) এর FK
---    Supabase Auth ব্যবহার করলে users.id = auth.users.id
---    তাই gen_random_uuid() বাদ, REFERENCES auth.users(id) যোগ
+-- 🔑 users.id: gen_random_uuid() (custom bcrypt auth, no auth.users FK)
+--    অ্যাপটি custom bcrypt-based auth ব্যবহার করে
+--    ভবিষ্যতে Supabase Auth-তে migrate করলে FK যোগ করা যাবে
 --
 -- 🔑 password column রাখা হয়েছে (custom bcrypt auth)
 --    অ্যাপটি custom bcrypt-based auth ব্যবহার করে
 --    ভবিষ্যতে Supabase Auth-তে migrate করলে সরানো যাবে
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS "users" (
-  "id"          UUID        PRIMARY KEY REFERENCES auth.users("id") ON DELETE CASCADE,  -- FK to auth.users
+  "id"          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),  -- @id @default(uuid()) @db.Uuid
   "email"       TEXT        NOT NULL UNIQUE,                          -- @unique @db.Text
   "name"        TEXT,                                                 -- String? @db.Text
   "phone"       TEXT,                                                 -- String? @db.Text
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS "products" (
   "descriptionBN" TEXT,                                                   -- String? @db.Text
   "price"         DECIMAL(10,2) NOT NULL,                                -- @db.Decimal(10, 2)
   "salePrice"     DECIMAL(10,2),                                         -- Decimal? @db.Decimal(10, 2)
-  "category"      UUID          NOT NULL REFERENCES "categories"("id") ON DELETE RESTRICT,  -- categoryId @map("category") → Restrict
+  "categoryId"   UUID          NOT NULL REFERENCES "categories"("id") ON DELETE RESTRICT,  -- categoryId → Restrict
   "images"        TEXT[]        NOT NULL DEFAULT '{}',                   -- String[] @default([])
   "stock"         INTEGER       NOT NULL DEFAULT 0,                      -- @default(0)
   "featured"      BOOLEAN       NOT NULL DEFAULT false,                  -- @default(false)
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS "products" (
 );
 
 -- Prisma @@index([categoryId])
-CREATE INDEX IF NOT EXISTS "products_categoryId_idx" ON "products" ("category");
+CREATE INDEX IF NOT EXISTS "products_categoryId_idx" ON "products" ("categoryId");
 -- Prisma @@index([featured])
 CREATE INDEX IF NOT EXISTS "products_featured_idx"   ON "products" ("featured");
 -- Prisma @@index([active])
@@ -334,29 +334,35 @@ END $$;
 -- ║  স্বয়ংক্রিয়ভাবে public.users এ row তৈরি হবে           ║
 -- ╚══════════════════════════════════════════════════════════╝
 
-CREATE OR REPLACE FUNCTION "public_handle_new_user"()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO "users" ("id", "email", "name", "role")
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data ->> 'name', split_part(NEW.email, '@', 1)),
-    COALESCE((NEW.raw_user_meta_data ->> 'role')::"UserRole", 'customer')
-  )
-  ON CONFLICT ("id") DO NOTHING;
-  RETURN NEW;
-END;
-$$;
+-- ╔══════════════════════════════════════════════════════════╗
+-- ║  PHASE 3.5: COMMENTED OUT — Supabase Auth triggers       ║
+-- ║  Currently using custom bcrypt auth. Uncomment when      ║
+-- ║  migrating to Supabase Auth.                             ║
+-- ╚══════════════════════════════════════════════════════════╝
 
-DROP TRIGGER IF EXISTS "on_auth_user_created" ON auth.users;
-CREATE TRIGGER "on_auth_user_created"
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION "public_handle_new_user"();
+-- CREATE OR REPLACE FUNCTION "public_handle_new_user"()
+-- RETURNS TRIGGER
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = public
+-- AS $$
+-- BEGIN
+--   INSERT INTO "users" ("id", "email", "name", "role")
+--   VALUES (
+--     NEW.id,
+--     NEW.email,
+--     COALESCE(NEW.raw_user_meta_data ->> 'name', split_part(NEW.email, '@', 1)),
+--     COALESCE((NEW.raw_user_meta_data ->> 'role')::"UserRole", 'customer')
+--   )
+--   ON CONFLICT ("id") DO NOTHING;
+--   RETURN NEW;
+-- END;
+-- $$;
+
+-- DROP TRIGGER IF EXISTS "on_auth_user_created" ON auth.users;
+-- CREATE TRIGGER "on_auth_user_created"
+--   AFTER INSERT ON auth.users
+--   FOR EACH ROW EXECUTE FUNCTION "public_handle_new_user"();
 
 
 -- ╔══════════════════════════════════════════════════════════╗
@@ -464,7 +470,7 @@ CREATE POLICY "users_auth_update_own" ON "users"
   FOR UPDATE USING (auth.uid() = "id")
   WITH CHECK (
     auth.uid() = "id"
-    -- email পরিবর্তন ব্লক (auth.users.email এর সাথে sync থাকতে হবে)
+    -- email পরিবর্তন ব্লক (custom auth — email change risk)
     AND "email" = (SELECT "email" FROM "users" WHERE "id" = auth.uid())
     -- role পরিবর্তন ব্লক (শুধু admin/service_role করতে পারে)
     AND "role" = (SELECT "role" FROM "users" WHERE "id" = auth.uid())
@@ -472,7 +478,7 @@ CREATE POLICY "users_auth_update_own" ON "users"
     AND "banned" = (SELECT "banned" FROM "users" WHERE "id" = auth.uid())
     -- bannedUntil পরিবর্তন ব্লক (শুধু admin/service_role করতে পারে)
     AND "bannedUntil" IS NOT DISTINCT FROM (SELECT "bannedUntil" FROM "users" WHERE "id" = auth.uid())
-    -- id পরিবর্তন ব্লক (FK to auth.users)
+    -- id পরিবর্তন ব্লক
     AND "id" = auth.uid()
   );
 
@@ -810,20 +816,20 @@ BEGIN
 END;
 $$;
 
--- Email sync: যদি auth.users এ email change হয়, public.users এও sync করুক
-CREATE OR REPLACE FUNCTION "sync_user_email"()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF NEW.email IS DISTINCT FROM OLD.email THEN
-    UPDATE "users" SET "email" = NEW.email WHERE "id" = NEW.id;
-  END IF;
-  RETURN NEW;
-END;
-$$;
+-- Email sync: COMMENTED OUT — only needed with Supabase Auth
+-- CREATE OR REPLACE FUNCTION "sync_user_email"()
+-- RETURNS TRIGGER
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = public
+-- AS $$
+-- BEGIN
+--   IF NEW.email IS DISTINCT FROM OLD.email THEN
+--     UPDATE "users" SET "email" = NEW.email WHERE "id" = NEW.id;
+--   END IF;
+--   RETURN NEW;
+-- END;
+-- $$;
 
 -- ────────────────────────────────────────────────────────────
 -- 5.3 Function permissions (সব function তৈরির পর)
@@ -831,7 +837,7 @@ $$;
 GRANT EXECUTE ON FUNCTION "is_admin"() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION "is_not_banned"() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION "update_updated_at_column"() TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION "public_handle_new_user"() TO anon, authenticated, service_role;
+-- GRANT EXECUTE ON FUNCTION "public_handle_new_user"() TO anon, authenticated, service_role;
 
 -- Admin action functions — শুধু service_role execute করতে পারে
 -- Client-side (anon/authenticated) থেকে direct call ব্লক
@@ -844,9 +850,9 @@ GRANT EXECUTE ON FUNCTION "admin_set_user_banned"(UUID, BOOLEAN, TIMESTAMPTZ) TO
 REVOKE ALL ON FUNCTION "admin_update_setting"(TEXT, JSONB) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION "admin_update_setting"(TEXT, JSONB) TO service_role;
 
--- Email sync trigger function: শুধু auth system ব্যবহার করে
-REVOKE ALL ON FUNCTION "sync_user_email"() FROM anon, authenticated;
-GRANT EXECUTE ON FUNCTION "sync_user_email"() TO service_role;
+-- Email sync trigger function: COMMENTED OUT
+-- REVOKE ALL ON FUNCTION "sync_user_email"() FROM anon, authenticated;
+-- GRANT EXECUTE ON FUNCTION "sync_user_email"() TO service_role;
 
 -- ────────────────────────────────────────────────────────────
 -- 5.4 Supabase Realtime সক্রিয় করা
@@ -856,38 +862,28 @@ ALTER PUBLICATION supabase_realtime ADD TABLE "orders";
 
 -- ────────────────────────────────────────────────────────────
 -- 5.5 Idempotent triggers on auth.users
--- 🔑 FIX #3: DROP TRIGGER IF EXISTS → CREATE TRIGGER
--- ────────────────────────────────────────────────────────────
-DROP TRIGGER IF EXISTS "on_auth_user_email_changed" ON auth.users;
-CREATE TRIGGER "on_auth_user_email_changed"
-  AFTER UPDATE OF email ON auth.users
-  FOR EACH ROW
-  WHEN (OLD.email IS DISTINCT FROM NEW.email)
-  EXECUTE FUNCTION "sync_user_email"();
+-- COMMENTED OUT — only needed with Supabase Auth
+-- DROP TRIGGER IF EXISTS "on_auth_user_email_changed" ON auth.users;
+-- CREATE TRIGGER "on_auth_user_email_changed"
+--   AFTER UPDATE OF email ON auth.users
+--   FOR EACH ROW
+--   WHEN (OLD.email IS DISTINCT FROM NEW.email)
+--   EXECUTE FUNCTION "sync_user_email"();
 
 -- ────────────────────────────────────────────────────────────
--- 5.6 Supabase Auth compatible admin setup
---
--- পুরানো পদ্ধতি (বাদ):
---   INSERT INTO users (email, password, role) VALUES (...)
---
--- নতুন পদ্ধতি (Supabase Auth):
---   1. auth.users এ admin তৈরি করুন (Supabase Dashboard থেকে)
---   2. on_auth_user_created trigger স্বয়ংক্রিয়ভাবে public.users এ row তৈরি করবে
---   3. তারপর role admin করুন
---
--- নিচে Step-by-step দেওয়া হলো:
+-- 5.6 Default admin user (custom bcrypt auth)
+-- Password: admin123 (bcrypt hash)
+-- ⚠️  প্রথম login এর পর পাসওয়ার্ড পরিবর্তন করুন!
 -- ────────────────────────────────────────────────────────────
 
--- STEP A: Supabase Dashboard → Authentication → Users → Add User
---   Email: admin@banglabazar.com
---   Password: (আপনার শক্তিশালী পাসওয়ার্ড দিন)
---   Auto Confirm: ✅ ON
---
--- STEP B: তৈরি হওয়া user-এর role admin করুন:
---   (নিচের query রান করুন user তৈরি হওয়ার পর)
-
--- UPDATE "users" SET "role" = 'admin' WHERE "email" = 'admin@banglabazar.com';
+INSERT INTO "users" ("id", "email", "name", "password", "role")
+VALUES (
+  gen_random_uuid(),
+  'admin@banglabazar.com',
+  'Admin',
+  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+  'admin'
+) ON CONFLICT ("email") DO NOTHING;
 
 
 -- ╔══════════════════════════════════════════════════════════╗
@@ -904,8 +900,8 @@ CREATE TRIGGER "on_auth_user_email_changed"
 -- সব policies দেখুন:
 -- SELECT tablename, policyname, cmd FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename, policyname;
 
--- users.id → auth.users(id) FK আছে কিনা:
--- SELECT conname, confrelid::regclass FROM pg_constraint WHERE conrelid = 'public.users'::regclass AND contype = 'f';
+-- users.id → check structure:
+-- SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'users';
 
 -- Realtime টেবিল দেখুন:
 -- SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
