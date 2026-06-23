@@ -715,8 +715,27 @@ function ProductsView({ token }: { token: string }) {
     }
   }
 
-  const removeImage = (index: number) => {
-    const currentImages = JSON.parse(formImages || '[]')
+  const removeImage = async (index: number) => {
+    const currentImages: string[] = JSON.parse(formImages || '[]')
+    const imageUrl = currentImages[index]
+
+    // Try to delete from R2 if it's an R2 URL
+    if (imageUrl && (imageUrl.includes('r2.dev') || imageUrl.includes('r2.cloudflarestorage') || imageUrl.includes('img.banglabazar'))) {
+      try {
+        const adminData = JSON.parse(localStorage.getItem('bdk-admin') || '{}')
+        await fetch('/api/upload', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminData.adminToken}`,
+          },
+          body: JSON.stringify({ url: imageUrl }),
+        })
+      } catch {
+        // Silently fail — image removed from list even if R2 delete fails
+      }
+    }
+
     const newImages = currentImages.filter((_: string, i: number) => i !== index)
     setFormImages(JSON.stringify(newImages))
   }
