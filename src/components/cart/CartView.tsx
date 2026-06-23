@@ -1,19 +1,46 @@
 'use client'
 
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Trash2, Minus, Plus, ShoppingBag, CheckSquare, Square } from 'lucide-react'
 import { useCartStore } from '@/store/cart-store'
 import { useNavStore } from '@/store/nav-store'
+import { toast } from 'sonner'
 
 const DELIVERY_FEE = 60
 
 export function CartView() {
-  const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart } =
-    useCartStore()
+  const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart } = useCartStore()
   const navigate = useNavStore((s) => s.navigate)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const itemCount = getItemCount()
   const subtotal = getTotal()
   const total = subtotal > 0 ? subtotal + DELIVERY_FEE : 0
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === items.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(items.map(i => i.productId)))
+    }
+  }
+
+  const deleteSelected = () => {
+    if (selectedIds.size === 0) return
+    selectedIds.forEach(id => removeItem(id))
+    toast.success(`${selectedIds.size} item(s) removed`)
+    setSelectedIds(new Set())
+  }
 
   const handleCheckout = () => {
     navigate('checkout')
@@ -27,32 +54,18 @@ export function CartView() {
         animate={{ opacity: 1 }}
         className="flex flex-col items-center justify-center min-h-[60vh] px-6 py-12 bg-background"
       >
-        {/* Dark theme empty cart illustration */}
-        <div className="w-32 h-32 mb-6 flex items-center justify-center rounded-full bg-card border border-border">
-          <svg
-            width="64"
-            height="64"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#FFD700"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="9" cy="21" r="1" />
-            <circle cx="20" cy="21" r="1" />
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-          </svg>
+        <div className="w-28 h-28 mb-6 flex items-center justify-center nb-card bg-[#FFD700]/10 p-4">
+          <ShoppingBag className="h-12 w-12 text-[#FFD700]" />
         </div>
-        <h2 className="text-xl font-bold text-foreground mb-2">
+        <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
           Your cart is empty
         </h2>
-        <p className="text-muted-foreground text-sm mb-6 text-center">
-          Looks like you haven&apos;t added anything to your cart yet. Start browsing and find something you love!
+        <p className="text-muted-foreground text-sm mb-6 text-center max-w-xs">
+          Looks like you haven&apos;t added anything yet. Start browsing!
         </p>
         <button
           onClick={() => navigate('home')}
-          className="px-6 py-3 rounded-xl font-semibold text-sm transition-colors bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D]"
+          className="nb-btn px-6 py-3 bg-[#FFD700] text-[#0A0A0A] text-sm"
         >
           Start Shopping
         </button>
@@ -60,27 +73,62 @@ export function CartView() {
     )
   }
 
+  const allSelected = selectedIds.size === items.length
+
   return (
     <div className="pb-4 bg-background min-h-screen">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3"
+        className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b-[3px] border-foreground px-4 py-3"
       >
         <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <h1 className="text-lg font-bold text-foreground">Shopping Cart</h1>
-          <span className="text-sm text-muted-foreground">
-            {itemCount} {itemCount === 1 ? 'item' : 'items'}
-          </span>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-heading font-bold text-foreground">Cart</h1>
+            <span className="nb-badge bg-[#FFD700] text-[#0A0A0A]">{itemCount}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <button
+                onClick={deleteSelected}
+                className="nb-btn-sm px-3 py-1.5 bg-[#EF4444] text-white text-xs flex items-center gap-1"
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete ({selectedIds.size})
+              </button>
+            )}
+            <button
+              onClick={clearCart}
+              className="text-xs text-[#EF4444] font-bold hover:underline"
+            >
+              Clear All
+            </button>
+          </div>
         </div>
       </motion.div>
 
+      {/* Select All */}
+      <div className="max-w-7xl mx-auto px-4 mt-3">
+        <button
+          onClick={toggleSelectAll}
+          className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2"
+        >
+          {allSelected ? (
+            <CheckSquare className="h-5 w-5 text-[#FFD700]" />
+          ) : (
+            <Square className="h-5 w-5 text-muted-foreground" />
+          )}
+          {allSelected ? 'Deselect All' : 'Select All'}
+        </button>
+      </div>
+
       {/* Cart items */}
-      <div className="max-w-7xl mx-auto px-4 mt-4">
+      <div className="max-w-7xl mx-auto px-4">
         <AnimatePresence mode="popLayout">
           {items.map((item, index) => {
             const effectivePrice = item.salePrice || item.price
+            const isSelected = selectedIds.has(item.productId)
             return (
               <motion.div
                 key={item.productId}
@@ -89,49 +137,40 @@ export function CartView() {
                 exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
                 layout
-                className="flex gap-3 bg-card rounded-xl border border-border p-3 mb-3"
+                className={`nb-card bg-card p-3 mb-3 flex gap-3 ${isSelected ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-background' : ''}`}
               >
+                {/* Checkbox */}
+                <button
+                  onClick={() => toggleSelect(item.productId)}
+                  className="shrink-0 self-center"
+                  aria-label={isSelected ? 'Deselect item' : 'Select item'}
+                >
+                  {isSelected ? (
+                    <CheckSquare className="h-5 w-5 text-[#FFD700]" />
+                  ) : (
+                    <Square className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </button>
+
                 {/* Image */}
                 <div
-                  className="shrink-0 w-20 h-20 rounded-lg bg-input overflow-hidden cursor-pointer"
-                  onClick={() =>
-                    navigate('product-detail', { productId: item.productId })
-                  }
+                  className="shrink-0 w-20 h-20 rounded-lg overflow-hidden cursor-pointer border-2 border-foreground"
+                  onClick={() => navigate('product-detail', { productId: item.productId })}
                 >
                   {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <svg
-                        width="32"
-                        height="32"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#555"
-                        strokeWidth="1.5"
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg>
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <ShoppingBag className="h-6 w-6 text-muted-foreground" />
                     </div>
                   )}
                 </div>
 
                 {/* Details */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium text-foreground line-clamp-2 leading-tight">
+                  <h3 className="text-sm font-bold text-foreground line-clamp-2 leading-tight">
                     {item.name}
                   </h3>
-                  {item.nameBN && (
-                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                      {item.nameBN}
-                    </p>
-                  )}
 
                   <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-sm font-bold text-[#FFD700]">
@@ -144,92 +183,50 @@ export function CartView() {
                     )}
                   </div>
 
-                  {/* Quantity controls */}
+                  {/* Quantity + Delete row */}
                   <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-0">
+                    <div className="flex items-center">
                       <button
-                        onClick={() =>
-                          updateQuantity(item.productId, item.quantity - 1)
-                        }
-                        className="w-8 h-8 rounded-l-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-input active:bg-input/80 transition-colors"
+                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                        className="w-8 h-8 rounded-l-lg border-2 border-foreground flex items-center justify-center text-foreground hover:bg-[#FFD700]/10 active:translate-y-[1px] transition-all"
                         aria-label="Decrease quantity"
                       >
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
+                        <Minus className="h-3.5 w-3.5" />
                       </button>
-                      <span className="w-10 h-8 flex items-center justify-center border-t border-b border-border text-sm font-semibold text-foreground bg-card">
+                      <span className="w-10 h-8 flex items-center justify-center border-t-2 border-b-2 border-foreground text-sm font-bold text-foreground bg-card">
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() =>
-                          updateQuantity(item.productId, item.quantity + 1)
-                        }
+                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                         disabled={item.quantity >= item.stock}
-                        className="w-8 h-8 rounded-r-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-input active:bg-input/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        className="w-8 h-8 rounded-r-lg border-2 border-foreground flex items-center justify-center text-foreground hover:bg-[#FFD700]/10 active:translate-y-[1px] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                         aria-label="Increase quantity"
                       >
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <line x1="12" y1="5" x2="12" y2="19" />
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
+                        <Plus className="h-3.5 w-3.5" />
                       </button>
                     </div>
 
-                    <span className="text-sm font-bold text-[#FFD700]">
-                      ৳{(effectivePrice * item.quantity).toLocaleString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-[#FFD700]">
+                        ৳{(effectivePrice * item.quantity).toLocaleString()}
+                      </span>
+                      <button
+                        onClick={() => {
+                          removeItem(item.productId)
+                          toast.success('Item removed from cart')
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-[#EF4444]/10 transition-colors"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 className="h-4 w-4 text-[#EF4444]" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                {/* Remove */}
-                <button
-                  onClick={() => removeItem(item.productId)}
-                  className="shrink-0 self-start p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
-                  aria-label="Remove item"
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#f42a41"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
-                </button>
               </motion.div>
             )
           })}
         </AnimatePresence>
-
-        {/* Clear cart */}
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={clearCart}
-            className="text-sm text-red-500 hover:text-red-400 font-medium transition-colors"
-          >
-            Clear Cart
-          </button>
-        </div>
       </div>
 
       {/* Bottom summary */}
@@ -237,28 +234,27 @@ export function CartView() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="sticky bottom-0 bg-card border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.3)] px-4 py-4"
+        className="sticky bottom-0 bg-card border-t-[3px] border-foreground shadow-[0_-4px_0_0_var(--foreground)] px-4 py-4"
         style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="max-w-7xl mx-auto space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Subtotal</span>
-            <span>৳{subtotal.toLocaleString()}</span>
+            <span className="font-semibold text-foreground">৳{subtotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Delivery Fee</span>
-            <span>৳{DELIVERY_FEE}</span>
+            <span className="font-semibold text-foreground">৳{DELIVERY_FEE}</span>
           </div>
-          <div className="border-t border-border pt-2 flex justify-between text-base font-bold text-foreground">
+          <div className="border-t-2 border-foreground pt-2 flex justify-between text-lg font-heading font-bold text-foreground">
             <span>Total</span>
             <span className="text-[#FFD700]">৳{total.toLocaleString()}</span>
           </div>
-
           <button
             onClick={handleCheckout}
-            className="w-full mt-3 py-3.5 rounded-xl font-semibold text-base transition-colors active:scale-[0.98] bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D]"
+            className="nb-btn w-full mt-3 py-3.5 bg-[#FFD700] text-[#0A0A0A] text-base"
           >
-            Proceed to Checkout
+            Proceed to Checkout — ৳{total.toLocaleString()}
           </button>
         </div>
       </motion.div>
