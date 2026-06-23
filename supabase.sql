@@ -335,7 +335,11 @@ END $$;
 -- ╚══════════════════════════════════════════════════════════╝
 
 CREATE OR REPLACE FUNCTION "public_handle_new_user"()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   INSERT INTO "users" ("id", "email", "name", "role")
   VALUES (
@@ -347,7 +351,7 @@ BEGIN
   ON CONFLICT ("id") DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 CREATE TRIGGER "on_auth_user_created"
   AFTER INSERT ON auth.users
@@ -382,25 +386,37 @@ ALTER TABLE "settings"       ENABLE ROW LEVEL SECURITY;
 -- ────────────────────────────────────────────────────────────
 
 -- চেক করে বর্তমান user admin কিনা
+-- 🔑 FIX #2: SET search_path = public (search_path injection protection)
 CREATE OR REPLACE FUNCTION "is_admin"()
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
   SELECT EXISTS (
     SELECT 1 FROM "users"
     WHERE "id" = auth.uid()
     AND "role" = 'admin'
   );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$;
 
 -- চেক করে user banned কিনা
+-- 🔑 FIX #2: SET search_path = public (search_path injection protection)
 CREATE OR REPLACE FUNCTION "is_not_banned"()
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
   SELECT EXISTS (
     SELECT 1 FROM "users"
     WHERE "id" = auth.uid()
     AND "banned" = false
     AND ("bannedUntil" IS NULL OR "bannedUntil" < now())
   );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$;
 
 
 -- ────────────────────────────────────────────────────────────
@@ -434,13 +450,29 @@ CREATE POLICY "users_anon_deny_all" ON "users"
 CREATE POLICY "users_auth_read_own" ON "users"
   FOR SELECT USING (auth.uid() = "id");
 
--- authenticated: নিজের row আপডেট (role/banned পরিবর্তন করা যাবে না)
+-- 🔑 FIX #3: Email update ব্লক করা হয়েছে
+-- সিদ্ধান্ত: Email update allow করা হবে না। কারণ:
+--   1. Supabase Auth তে email change করলে confirmation লাগে
+--   2. public.users.email এবং auth.users.email sync রাখা জটিল
+--   3. Email পরিবর্তনে identity theft risk
+--   4. যদি email change দরকার হয়, Supabase Dashboard থেকে করুন
+--
+-- User শুধু এগুলো update করতে পারে: name, phone, address, avatar
+-- User এগুলো update করতে পারবে না: id, email, role, banned, bannedUntil, createdAt
 CREATE POLICY "users_auth_update_own" ON "users"
   FOR UPDATE USING (auth.uid() = "id")
   WITH CHECK (
     auth.uid() = "id"
+    -- email পরিবর্তন ব্লক (auth.users.email এর সাথে sync থাকতে হবে)
+    AND "email" = (SELECT "email" FROM "users" WHERE "id" = auth.uid())
+    -- role পরিবর্তন ব্লক (শুধু admin/service_role করতে পারে)
     AND "role" = (SELECT "role" FROM "users" WHERE "id" = auth.uid())
+    -- banned status পরিবর্তন ব্লক (শুধু admin/service_role করতে পারে)
     AND "banned" = (SELECT "banned" FROM "users" WHERE "id" = auth.uid())
+    -- bannedUntil পরিবর্তন ব্লক (শুধু admin/service_role করতে পারে)
+    AND "bannedUntil" IS NOT DISTINCT FROM (SELECT "bannedUntil" FROM "users" WHERE "id" = auth.uid())
+    -- id পরিবর্তন ব্লক (FK to auth.users)
+    AND "id" = auth.uid()
   );
 
 
@@ -456,6 +488,11 @@ CREATE POLICY "categories_anon_read_active" ON "categories"
 CREATE POLICY "categories_auth_read_all" ON "categories"
   FOR SELECT USING ("is_admin"() OR auth.uid() IS NOT NULL);
 
+-- 🔑 FIX #4: Admin write শুধু service_role দিয়ে (is_admin RLS bypass risk)
+-- categories, products, settings এ admin write শুধু backend থেকে হবে
+-- service_role bypasses RLS, তাই এটা safe
+-- তবে যদি authenticated client থেকে admin action করতে হয়,
+-- is_admin() check দিয়ে restrict করা হচ্ছে
 CREATE POLICY "categories_auth_admin_write" ON "categories"
   FOR ALL USING ("is_admin"()) WITH CHECK ("is_admin"());
 
@@ -626,10 +663,34 @@ CREATE POLICY "chat_messages_auth_read_own" ON "chat_messages"
 CREATE POLICY "chat_messages_auth_insert" ON "chat_messages"
   FOR INSERT WITH CHECK (auth.uid() = "senderId" AND "is_not_banned"());
 
--- authenticated: নিজের message update (read status ইত্যাদি)
-CREATE POLICY "chat_messages_auth_update_own" ON "chat_messages"
-  FOR UPDATE USING (auth.uid() = "senderId" OR auth.uid() = "receiverId")
-  WITH CHECK (auth.uid() = "senderId" OR auth.uid() = "receiverId");
+-- 🔑 FIX #1: Sender এবং Receiver update আলাদা করা হয়েছে
+--
+-- নিয়ম:
+--   ✅ Sender: শুধু message content edit করতে পারে (message column only)
+--   ✅ Receiver: শুধু "read" status update করতে পারে (read column only)
+--   ❌ Receiver: message content edit করতে পারে না
+--   ❌ Sender: read status change করতে পারে না
+--   ✅ Admin: সবকিছু করতে পারে (আলাদা policy)
+
+-- Sender: নিজের message edit করা (শুধু message column change হতে পারে)
+CREATE POLICY "chat_messages_auth_sender_update" ON "chat_messages"
+  FOR UPDATE USING (auth.uid() = "senderId")
+  WITH CHECK (
+    auth.uid() = "senderId"
+    -- read status sender change করতে পারে না
+    AND "read" = (SELECT "read" FROM "chat_messages" WHERE "id" = "chat_messages"."id")
+  );
+
+-- Receiver: শুধু read status update করা (message content change করতে পারে না)
+CREATE POLICY "chat_messages_auth_receiver_update_read" ON "chat_messages"
+  FOR UPDATE USING (auth.uid() = "receiverId")
+  WITH CHECK (
+    auth.uid() = "receiverId"
+    -- message content receiver change করতে পারে না
+    AND "message" = (SELECT "message" FROM "chat_messages" WHERE "id" = "chat_messages"."id")
+    -- senderId change করতে পারে না
+    AND "senderId" = (SELECT "senderId" FROM "chat_messages" WHERE "id" = "chat_messages"."id")
+  );
 
 -- admin: সব message এ full access
 CREATE POLICY "chat_messages_auth_admin_all" ON "chat_messages"
@@ -645,6 +706,7 @@ CREATE POLICY "chat_messages_auth_admin_all" ON "chat_messages"
 CREATE POLICY "settings_anon_read" ON "settings"
   FOR SELECT USING (true);
 
+-- 🔑 FIX #4: Settings write শুধু admin (backend/service_role recommended)
 CREATE POLICY "settings_auth_admin_write" ON "settings"
   FOR ALL USING ("is_admin"()) WITH CHECK ("is_admin"());
 
@@ -694,6 +756,21 @@ GRANT EXECUTE ON FUNCTION "is_not_banned"() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION "update_updated_at_column"() TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION "public_handle_new_user"() TO anon, authenticated, service_role;
 
+-- 🔑 FIX #4: Admin action functions — শুধু service_role execute করতে পারে
+-- Client-side (anon/authenticated) থেকে direct call ব্লক
+REVOKE ALL ON FUNCTION "admin_set_user_role"(UUID, "UserRole") FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION "admin_set_user_role"(UUID, "UserRole") TO service_role;
+
+REVOKE ALL ON FUNCTION "admin_set_user_banned"(UUID, BOOLEAN, TIMESTAMPTZ) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION "admin_set_user_banned"(UUID, BOOLEAN, TIMESTAMPTZ) TO service_role;
+
+REVOKE ALL ON FUNCTION "admin_update_setting"(TEXT, JSONB) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION "admin_update_setting"(TEXT, JSONB) TO service_role;
+
+-- Email sync trigger function: শুধু auth system ব্যবহার করে
+REVOKE ALL ON FUNCTION "sync_user_email"() FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION "sync_user_email"() TO service_role;
+
 -- ────────────────────────────────────────────────────────────
 -- 5.3 Supabase Realtime সক্রিয় করা
 -- ────────────────────────────────────────────────────────────
@@ -727,30 +804,88 @@ ALTER PUBLICATION supabase_realtime ADD TABLE "orders";
 -- STEP C (optional): যদি আগে থেকেই admin user থাকে এবং
 -- আপনি SQL দিয়ে তৈরি করতে চান, তাহলে নিচের function ব্যবহার করুন:
 
-CREATE OR REPLACE FUNCTION "create_admin_user"(
-  p_email    TEXT,
-  p_password TEXT,
-  p_name     TEXT DEFAULT 'Admin'
+-- 🔑 FIX #4: Admin action functions — শুধু service_role দিয়ে callable
+-- এগুলো client-side থেকে direct call করা যাবে না
+
+-- Admin role change (শুধু service_role ব্যবহার করে API route থেকে call করুন)
+CREATE OR REPLACE FUNCTION "admin_set_user_role"(
+  p_target_user_id UUID,
+  p_new_role        "UserRole"
 )
-RETURNS UUID AS $$
-DECLARE
-  v_user_id UUID;
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  -- auth.users এ user তৈরি (Supabase Auth API)
-  v_user_id := auth.uid_from_token(
-    extensions.url_encode(p_email)
-  );
-
-  -- যদি auth.uid_from_token কাজ না করে, তাহলে
-  -- Supabase Dashboard থেকে manually user তৈরি করুন
-
-  RAISE NOTICE 'Supabase Dashboard → Authentication → Users → Add User দিয়ে admin তৈরি করুন';
-  RAISE NOTICE 'Email: %, তারপর নিচের query রান করুন:', p_email;
-  RAISE NOTICE 'UPDATE "users" SET "role" = ''admin'' WHERE "email" = ''%'';', p_email;
-
-  RETURN v_user_id;
+  -- শুধু admin user-ই এটা call করতে পারে
+  IF NOT "is_admin"() THEN
+    RAISE EXCEPTION 'Permission denied: admin only';
+  END IF;
+  UPDATE "users" SET "role" = p_new_role WHERE "id" = p_target_user_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+-- Admin ban/unban (শুধু service_role ব্যবহার করে API route থেকে call করুন)
+CREATE OR REPLACE FUNCTION "admin_set_user_banned"(
+  p_target_user_id UUID,
+  p_banned         BOOLEAN,
+  p_banned_until   TIMESTAMPTZ DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT "is_admin"() THEN
+    RAISE EXCEPTION 'Permission denied: admin only';
+  END IF;
+  UPDATE "users" SET "banned" = p_banned, "bannedUntil" = p_banned_until
+  WHERE "id" = p_target_user_id;
+END;
+$$;
+
+-- Admin settings update (শুধু service_role ব্যবহার করে API route থেকে call করুন)
+CREATE OR REPLACE FUNCTION "admin_update_setting"(
+  p_key   TEXT,
+  p_value JSONB
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT "is_admin"() THEN
+    RAISE EXCEPTION 'Permission denied: admin only';
+  END IF;
+  INSERT INTO "settings" ("key", "value")
+  VALUES (p_key, p_value)
+  ON CONFLICT ("key") DO UPDATE SET "value" = p_value;
+END;
+$$;
+
+-- Email sync: যদি auth.users এ email change হয়, public.users এও sync করুক
+CREATE OR REPLACE FUNCTION "sync_user_email"()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.email IS DISTINCT FROM OLD.email THEN
+    UPDATE "users" SET "email" = NEW.email WHERE "id" = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "on_auth_user_email_changed"
+  AFTER UPDATE OF email ON auth.users
+  FOR EACH ROW
+  WHEN (OLD.email IS DISTINCT FROM NEW.email)
+  EXECUTE FUNCTION "sync_user_email"();
 
 
 -- ╔══════════════════════════════════════════════════════════╗
