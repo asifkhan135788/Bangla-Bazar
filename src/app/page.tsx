@@ -5,7 +5,6 @@ import { useNavStore } from '@/store/nav-store'
 import { useAuthStore } from '@/store/auth-store'
 import Header from '@/components/layout/Header'
 import BottomNav from '@/components/layout/BottomNav'
-import Footer from '@/components/layout/Footer'
 import PageTransition from '@/components/layout/PageTransition'
 import HeroSection from '@/components/home/HeroSection'
 import FeaturedProducts from '@/components/home/FeaturedProducts'
@@ -149,7 +148,6 @@ export default function Home() {
           {renderView()}
         </PageTransition>
       </main>
-      <Footer />
       <BottomNav />
     </div>
   )

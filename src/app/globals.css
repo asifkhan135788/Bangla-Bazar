@@ -43,83 +43,86 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-bd-green: #006a4e;
-  --color-bd-red: #f42a41;
-  --color-bd-gold: #FFD700;
-  --color-bd-dark: #0A0A0A;
-  --color-bd-card: #1A1A1A;
-  --color-bd-border: #2A2A2A;
-  --color-bd-muted: #888888;
+  /* Neo Brutalism tokens */
+  --color-nb-yellow: #FFD700;
+  --color-nb-black: #1A1A1A;
+  --color-nb-white: #FAFAFA;
+  --color-nb-pink: #FF6B9D;
+  --color-nb-blue: #4ECDC4;
+  --color-nb-orange: #FF8A5C;
+  --color-nb-lime: #B8FF3E;
+  --color-nb-purple: #A855F7;
+  --color-nb-red: #EF4444;
 }
 
-/* ═══ Light Theme ═══ */
+/* ═══ Neo Brutalism Light Theme ═══ */
 :root {
-  --radius: 0.625rem;
-  --background: #FAFAFA;
-  --foreground: #0A0A0A;
+  --radius: 0.75rem;
+  --background: #FFFEF2;
+  --foreground: #1A1A1A;
   --card: #FFFFFF;
-  --card-foreground: #0A0A0A;
+  --card-foreground: #1A1A1A;
   --popover: #FFFFFF;
-  --popover-foreground: #0A0A0A;
-  --primary: #D4A800;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F0F0F0;
-  --secondary-foreground: #0A0A0A;
-  --muted: #F0F0F0;
-  --muted-foreground: #666666;
-  --accent: #E8E8E8;
-  --accent-foreground: #0A0A0A;
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: #E0E0E0;
-  --input: #E0E0E0;
-  --ring: #D4A800;
-  --chart-1: #D4A800;
-  --chart-2: oklch(0.6 0.2 25);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #0A0A0A;
-  --sidebar-primary: #D4A800;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F0F0F0;
-  --sidebar-accent-foreground: #0A0A0A;
-  --sidebar-border: #E0E0E0;
-  --sidebar-ring: #D4A800;
-}
-
-/* ═══ Dark Theme ═══ */
-.dark {
-  --background: #0A0A0A;
-  --foreground: #ffffff;
-  --card: #1A1A1A;
-  --card-foreground: #ffffff;
-  --popover: #1A1A1A;
-  --popover-foreground: #ffffff;
+  --popover-foreground: #1A1A1A;
   --primary: #FFD700;
-  --primary-foreground: #0A0A0A;
-  --secondary: #1A1A1A;
-  --secondary-foreground: #ffffff;
-  --muted: #1A1A1A;
-  --muted-foreground: #888888;
-  --accent: #2A2A2A;
-  --accent-foreground: #ffffff;
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: #2A2A2A;
-  --input: #2A2A2A;
+  --primary-foreground: #1A1A1A;
+  --secondary: #FFF3B0;
+  --secondary-foreground: #1A1A1A;
+  --muted: #F5F0E1;
+  --muted-foreground: #6B6B6B;
+  --accent: #FF6B9D;
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --border: #1A1A1A;
+  --input: #1A1A1A;
   --ring: #FFD700;
   --chart-1: #FFD700;
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: #0A0A0A;
-  --sidebar-foreground: #ffffff;
+  --chart-2: #FF6B9D;
+  --chart-3: #4ECDC4;
+  --chart-4: #FF8A5C;
+  --chart-5: #A855F7;
+  --sidebar: #FFFEF2;
+  --sidebar-foreground: #1A1A1A;
   --sidebar-primary: #FFD700;
-  --sidebar-primary-foreground: #0A0A0A;
-  --sidebar-accent: #1A1A1A;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2A2A2A;
+  --sidebar-primary-foreground: #1A1A1A;
+  --sidebar-accent: #FFF3B0;
+  --sidebar-accent-foreground: #1A1A1A;
+  --sidebar-border: #1A1A1A;
+  --sidebar-ring: #FFD700;
+}
+
+/* ═══ Neo Brutalism Dark Theme ═══ */
+.dark {
+  --background: #1A1A1A;
+  --foreground: #FAFAFA;
+  --card: #2A2A2A;
+  --card-foreground: #FAFAFA;
+  --popover: #2A2A2A;
+  --popover-foreground: #FAFAFA;
+  --primary: #FFD700;
+  --primary-foreground: #1A1A1A;
+  --secondary: #333333;
+  --secondary-foreground: #FAFAFA;
+  --muted: #2A2A2A;
+  --muted-foreground: #999999;
+  --accent: #FF6B9D;
+  --accent-foreground: #FAFAFA;
+  --destructive: #EF4444;
+  --border: #3A3A3A;
+  --input: #3A3A3A;
+  --ring: #FFD700;
+  --chart-1: #FFD700;
+  --chart-2: #FF6B9D;
+  --chart-3: #4ECDC4;
+  --chart-4: #FF8A5C;
+  --chart-5: #A855F7;
+  --sidebar: #1A1A1A;
+  --sidebar-foreground: #FAFAFA;
+  --sidebar-primary: #FFD700;
+  --sidebar-primary-foreground: #1A1A1A;
+  --sidebar-accent: #2A2A2A;
+  --sidebar-accent-foreground: #FAFAFA;
+  --sidebar-border: #3A3A3A;
   --sidebar-ring: #FFD700;
 }
 
@@ -128,14 +131,74 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
   }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading), Georgia, serif;
+  }
+}
+
+/* ═══ Neo Brutalism Utility Classes ═══ */
+.nb-card {
+  border: 3px solid var(--foreground);
+  border-radius: 1rem;
+  box-shadow: 4px 4px 0px var(--foreground);
+  transition: all 0.15s ease;
+}
+.nb-card:hover {
+  box-shadow: 6px 6px 0px var(--foreground);
+  transform: translate(-1px, -1px);
+}
+
+.nb-btn {
+  border: 2.5px solid var(--foreground);
+  border-radius: 0.75rem;
+  box-shadow: 3px 3px 0px var(--foreground);
+  font-weight: 700;
+  transition: all 0.1s ease;
+}
+.nb-btn:active {
+  box-shadow: 1px 1px 0px var(--foreground);
+  transform: translate(2px, 2px);
+}
+
+.nb-btn-sm {
+  border: 2px solid var(--foreground);
+  border-radius: 0.5rem;
+  box-shadow: 2px 2px 0px var(--foreground);
+  font-weight: 600;
+  transition: all 0.1s ease;
+}
+.nb-btn-sm:active {
+  box-shadow: 0px 0px 0px var(--foreground);
+  transform: translate(2px, 2px);
+}
+
+.nb-input {
+  border: 2.5px solid var(--foreground);
+  border-radius: 0.75rem;
+  box-shadow: 3px 3px 0px rgba(0,0,0,0.08);
+  transition: all 0.15s ease;
+}
+.nb-input:focus {
+  box-shadow: 3px 3px 0px var(--foreground);
+  outline: none;
+  border-color: var(--foreground);
+}
+
+.nb-badge {
+  border: 2px solid var(--foreground);
+  border-radius: 9999px;
+  box-shadow: 2px 2px 0px var(--foreground);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.6rem;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -143,20 +206,13 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2A2A2A;
-  border-radius: 3px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #2A2A2A;
-}
-
-:root ::-webkit-scrollbar-thumb {
-  background: #C0C0C0;
+  background: #FFD700;
+  border-radius: 4px;
+  border: 2px solid var(--background);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #FFD700;
+  background: #FFC107;
 }
 
 /* Smooth scroll */
@@ -177,4 +233,17 @@ html {
 
 .animate-marquee {
   animation: marquee 20s linear infinite;
+}
+
+/* Neo Brutalism sticker effect */
+.nb-sticker {
+  display: inline-block;
+  border: 2px solid var(--foreground);
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transform: rotate(-2deg);
+  box-shadow: 2px 2px 0px var(--foreground);
 }
