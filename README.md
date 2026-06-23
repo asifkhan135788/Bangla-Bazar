@@ -7,6 +7,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss)
 ![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791?logo=postgresql)
+![Security](https://img.shields.io/badge/RLS-Enabled-brightgreen?logo=shield)
 
 ---
 
@@ -50,6 +51,7 @@
 - **Input Sanitization** — HTML stripped from all chat messages
 
 ### 🔒 Security
+- **Row Level Security (RLS)** — Every table protected with role-based policies
 - **XSS Protection** — `sanitizeInput()`, `sanitizeHtml()` with whitelist
 - **SQL Injection** — `escapeLikePattern()`, Prisma parameterized queries
 - **Auto-Ban** — Malicious search input detected → 3-day ban with `bannedUntil`
@@ -57,6 +59,7 @@
 - **CSRF Tokens** — Timing-safe comparison
 - **Security Headers** — CSP, HSTS, X-Frame-Options, Permissions-Policy
 - **Admin Auth** — Bearer token via AdminSession with 24h expiry
+- **Schema Permissions** — Revoked public schema access, granular GRANT system
 
 ### 📱 PWA-Ready
 - **Sticky Header** — Scroll-aware shadow, hamburger menu drawer
@@ -83,6 +86,7 @@
 | Auth | Custom bcrypt + AdminSession tokens |
 | Notifications | Telegram Bot API |
 | Fonts | Tinos + Anek Bangla (Google Fonts) |
+| Security | Row Level Security (RLS) on all tables |
 
 ---
 
@@ -163,6 +167,7 @@ bangla-bazar/
 │       ├── cart-store.ts          # Cart with isInCart() (persisted: bdk-cart)
 │       ├── lang-store.ts          # Language + t() translation function (persisted: bdk-lang)
 │       └── nav-store.ts           # SPA view router
+├── supabase-schema.sql            # 🆕 Full SQL with RLS policies (run in Supabase SQL Editor)
 ├── .env                           # Environment variables (NOT committed)
 ├── .gitignore
 ├── next.config.ts
@@ -191,7 +196,7 @@ npm install
 
 ### 2. Supabase Setup
 
-Supabase provides your **PostgreSQL database**, **Realtime** (for chat), and optional **Auth**.
+Supabase provides your **PostgreSQL database**, **Realtime** (for chat), and **Row Level Security**.
 
 #### Step 2a: Create a Supabase Project
 
@@ -225,32 +230,189 @@ You need two versions:
 
 > ⚠️ If the pooler URL uses port 6543, change it to 5432 for `DIRECT_URL`.
 
-#### Step 2d: Enable Realtime (for Chat)
+#### Step 2d: Run the SQL Schema (RECOMMENDED)
 
-1. Go to **Database → Replication**
-2. Under **Supabase Realtime**, click **Source** and enable:
-   - `chat_messages` table
-   - `orders` table (optional, for live order updates)
-3. If the tables don't exist yet, don't worry — `prisma db push` will create them. Come back here after step 3.
+This is the **recommended** way to set up the database — it creates all tables **with Row Level Security policies**.
 
-> 💡 **Note:** If you skip this step, chat will still work using **polling fallback** (5-second interval). Realtime is optional.
+1. Go to **Supabase → SQL Editor**
+2. Click **New Query**
+3. Copy the **entire contents** of `supabase-schema.sql` from this repo
+4. Paste it into the SQL Editor
+5. Click **Run** (or press `Ctrl+Enter`)
 
-#### Step 2e: Run Database Migrations
+This single script will:
+- ✅ Create all 4 enum types (`UserRole`, `OrderStatus`, `PaymentMethod`, `SenderType`)
+- ✅ Create all 11 tables with proper constraints and indexes
+- ✅ Add `updatedAt` auto-update triggers
+- ✅ **Enable RLS on every table**
+- ✅ Create **30+ security policies** (anon, authenticated, admin)
+- ✅ Add helper functions (`is_admin()`, `is_not_banned()`)
+- ✅ Configure schema permissions (revoke public access)
+- ✅ Enable Realtime for `chat_messages` and `orders`
+- ✅ Create default admin user (email: `admin@banglabazar.com`, password: `admin123`)
+
+> ⚠️ **IMPORTANT:** Change the default admin password immediately after first login!
+
+#### Step 2e: Alternative — Prisma DB Push (WITHOUT RLS)
+
+If you don't need RLS policies, you can use Prisma instead:
 
 ```bash
 npx prisma generate
 npx prisma db push
 ```
 
-This creates all tables in your Supabase PostgreSQL:
-- `users`, `categories`, `products`, `cart`, `orders`, `order_items`
-- `reviews`, `user_logs`, `admin_sessions`, `chat_messages`, `settings`
+This creates tables but **does NOT** enable RLS or security policies. For production, **always use the SQL method above**.
 
-#### Step 2f: (Optional) Seed Sample Data
+#### Step 2f: Verify RLS is Working
+
+After running the SQL, verify with these queries in SQL Editor:
+
+```sql
+-- Check RLS is enabled on all tables
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY tablename;
+
+-- List all policies
+SELECT tablename, policyname, cmd
+FROM pg_policies
+WHERE schemaname = 'public'
+ORDER BY tablename, policyname;
+
+-- Check Realtime is configured
+SELECT * FROM pg_publication_tables
+WHERE pubname = 'supabase_realtime';
+```
+
+Expected output for `rowsecurity`:
+| tablename | rowsecurity |
+|-----------|-------------|
+| admin_sessions | t |
+| cart | t |
+| categories | t |
+| chat_messages | t |
+| order_items | t |
+| orders | t |
+| products | t |
+| reviews | t |
+| settings | t |
+| user_logs | t |
+| users | t |
+
+#### Step 2g: (Optional) Seed Sample Data
 
 ```bash
 npx tsx scripts/seed.ts
 ```
+
+---
+
+## 🛡️ Row Level Security (RLS) — Detailed Reference
+
+### Security Model
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                   HOW RLS WORKS HERE                      │
+├──────────────────────────────────────────────────────────┤
+│                                                           │
+│  1. API Routes (Next.js Server)                           │
+│     → Uses Prisma with direct DB connection               │
+│     → BYPASSES RLS (equivalent to superuser)              │
+│     → All CRUD operations are secure via API auth         │
+│                                                           │
+│  2. Server Supabase Client                                │
+│     → Uses service_role key                               │
+│     → BYPASSES RLS                                        │
+│     → Used for server-side Realtime, admin ops            │
+│                                                           │
+│  3. Browser Supabase Client                               │
+│     → Uses anon public key                                │
+│     → RLS POLICES APPLY HERE                              │
+│     → Limited read-only access for Realtime               │
+│                                                           │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Policy Summary Table
+
+| Table | anon SELECT | anon INSERT/UPDATE/DELETE | authenticated SELECT | authenticated WRITE | Admin |
+|-------|-------------|--------------------------|---------------------|--------------------|----|
+| `users` | ❌ DENY | ❌ DENY | Own row only | Own profile (no role/banned change) | Via service_role |
+| `categories` | ✅ Active only | ❌ DENY | All | ❌ DENY | ✅ Full CRUD |
+| `products` | ✅ Active only | ❌ DENY | All | ❌ DENY | ✅ Full CRUD |
+| `cart` | ❌ DENY | ❌ DENY | Own items | Own items | Via service_role |
+| `orders` | ✅ Limited* | ❌ DENY | Own + Admin read | Own insert, Admin update | ✅ Status update |
+| `order_items` | ✅ Limited* | ❌ DENY | Own + Admin read | Own insert | Via service_role |
+| `reviews` | ✅ All | ❌ DENY | All | Own + Admin delete | ✅ Delete any |
+| `user_logs` | ❌ DENY | ❌ DENY | Admin only | ❌ DENY | ✅ Read |
+| `admin_sessions` | ❌ DENY | ❌ DENY | ❌ DENY | ❌ DENY | Via service_role only |
+| `chat_messages` | ✅ Limited* | ❌ DENY | Own conversations | Own messages + Admin | ✅ Full |
+| `settings` | ✅ All | ❌ DENY | All | Admin only | ✅ Full CRUD |
+
+> \* **Limited**: anon can read for Realtime subscriptions, but client-side filters further restrict visible data.
+
+### Helper Functions
+
+| Function | Purpose | Used By |
+|----------|---------|---------|
+| `is_admin()` | Checks if current Supabase Auth user has admin role | RLS policies |
+| `is_not_banned()` | Checks if user is not banned and ban hasn't expired | RLS policies |
+| `update_updated_at_column()` | Auto-updates `updatedAt` on row modification | Triggers |
+
+### Why RLS Matters
+
+1. **Defense in Depth** — Even if the API is compromised, the database rejects unauthorized access
+2. **Direct Supabase Client Protection** — The anon key is public (embedded in frontend JS). RLS ensures it can't be abused
+3. **Realtime Security** — Chat and order Realtime subscriptions only expose allowed data
+4. **Compliance** — Meets security best practices for PII handling (passwords, addresses, phone numbers)
+
+### Upgrading to Supabase Auth (Future)
+
+Currently, the app uses **custom bcrypt auth** with admin sessions. For even stronger RLS:
+
+1. Migrate user authentication to **Supabase Auth** (built-in)
+2. Replace `is_admin()` with JWT custom claims: `auth.jwt() → role`
+3. Replace anon policies with `authenticated` role policies
+4. This enables `auth.uid()` matching in all policies automatically
+
+---
+
+## 🔑 Admin Access
+
+### Default Admin (Created by SQL Schema)
+
+The `supabase-schema.sql` script creates a default admin:
+
+| Field | Value |
+|-------|-------|
+| Email | `admin@banglabazar.com` |
+| Password | `admin123` |
+| Role | `admin` |
+
+> ⚠️ **CHANGE THIS PASSWORD IMMEDIATELY** after first login!
+
+### Method 2: Create Admin via API
+
+```bash
+curl -X POST http://localhost:3000/api/auth \
+  -H "Content-Type: application/json" \
+  -d '{"action":"register","email":"admin@banglabazar.com","password":"YourStrongPassword!","name":"Admin"}'
+```
+
+Then manually update the role in Supabase SQL Editor:
+
+```sql
+UPDATE "users" SET "role" = 'admin' WHERE "email" = 'admin@banglabazar.com';
+```
+
+### Access Admin Panel
+
+Navigate to `/admin` and login with your admin credentials.
+
+---
 
 ### 3. Cloudflare R2 Setup (Product Image Storage)
 
@@ -365,79 +527,14 @@ TELEGRAM_CHAT_ID="123456789"
 
 ---
 
-### 6. Run the Development Server
+### 6. Generate Prisma Client & Run
 
 ```bash
+npx prisma generate
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
-
----
-
-## 🔑 Admin Access
-
-### Method 1: Create Admin via SQL
-
-Go to **Supabase → SQL Editor** and run:
-
-```sql
--- First, you need a bcrypt-hashed password.
--- Visit https://bcrypt-generator.com/ to generate one, or use this pre-hashed example:
--- Plain text: "admin123"
-
-INSERT INTO users (id, email, name, password, role)
-VALUES (
-  gen_random_uuid(),
-  'admin@banglabazar.com',
-  'Admin',
-  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
-  'admin'
-);
-```
-
-### Method 2: Create Admin via API
-
-```bash
-curl -X POST http://localhost:3000/api/auth \
-  -H "Content-Type: application/json" \
-  -d '{"action":"register","email":"admin@banglabazar.com","password":"admin123","name":"Admin"}'
-```
-
-Then manually update the role in Supabase SQL Editor:
-
-```sql
-UPDATE users SET role = 'admin' WHERE email = 'admin@banglabazar.com';
-```
-
-### Access Admin Panel
-
-Navigate to `/admin` and login with your admin credentials.
-
----
-
-## 🌐 Adding Translations
-
-All UI text is in `src/lib/i18n.ts`. To add/modify translations:
-
-```typescript
-// src/lib/i18n.ts
-const translations = {
-  en: {
-    newKey: 'New English Text',
-  },
-  bn: {
-    newKey: 'নতুন বাংলা টেক্সট',
-  },
-}
-```
-
-Then use in components:
-
-```tsx
-const { t } = useLangStore()
-return <span>{t('newKey')}</span>
-```
 
 ---
 
@@ -449,7 +546,7 @@ return <span>{t('newKey')}</span>
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
 | `npx prisma generate` | Generate Prisma client |
-| `npx prisma db push` | Push schema to database (no migration) |
+| `npx prisma db push` | Push schema to database (no RLS!) |
 | `npx prisma db pull` | Pull schema from database |
 | `npx prisma studio` | Open Prisma GUI database browser |
 | `npx tsx scripts/seed.ts` | Seed sample data |
@@ -463,6 +560,7 @@ return <span>{t('newKey')}</span>
 │                   Client (React)                  │
 │  Zustand stores: auth, cart, lang, nav            │
 │  Custom i18n with t() — no Google Translate      │
+│  Supabase anon client → RLS policies apply       │
 └──────────────────────┬──────────────────────────┘
                        │ API Calls
                        ▼
@@ -474,14 +572,46 @@ return <span>{t('newKey')}</span>
 │  /api/orders  → Checkout + Telegram alert         │
 │  /api/chat    → Chat messages                     │
 │  /api/upload  → R2 image upload (admin)           │
+│                                                   │
+│  Uses Prisma → direct DB (bypasses RLS)          │
+│  Uses Supabase service_role (bypasses RLS)       │
 └──────┬──────────┬──────────────┬─────────────────┘
        │          │              │
        ▼          ▼              ▼
 ┌──────────┐ ┌──────────┐ ┌──────────────────┐
 │ Supabase │ │ Cloudflare│ │ Telegram Bot API │
 │ PostgreSQL│ │    R2     │ │  (notifications) │
-│ Realtime │ │ (images)  │ └──────────────────┘
-└──────────┘ └──────────┘
+│ 🔒 RLS   │ │ (images)  │ └──────────────────┘
+│ Realtime │ └──────────┘
+└──────────┘
+```
+
+---
+
+## 🗃️ Database Schema
+
+```
+users ──────────┐
+  ├── cart      │ (userId → users.id, CASCADE)
+  ├── orders    │ (userId → users.id, RESTRICT)
+  ├── reviews   │ (userId → users.id, CASCADE)
+  ├── user_logs │ (userId → users.id, SET NULL)
+  ├── admin_sessions (userId → users.id, CASCADE)
+  └── chat_messages (senderId → users.id, CASCADE)
+
+categories ─────┐
+  └── products  │ (category → categories.id, RESTRICT)
+
+products ───────┐
+  ├── cart      │ (productId → products.id, CASCADE)
+  ├── order_items (productId → products.id, RESTRICT)
+  ├── reviews   │ (productId → products.id, CASCADE)
+  └── chat_messages (productId → products.id, CASCADE)
+
+orders ─────────┐
+  └── order_items (orderId → orders.id, CASCADE)
+
+settings (key-value, JSONB value)
 ```
 
 ---
