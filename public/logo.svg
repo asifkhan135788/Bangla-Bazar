@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0A0A0A"/>
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="#111111" stroke="#FFD700" stroke-width="1.5"/>
+  <text x="32" y="28" text-anchor="middle" fill="#FFD700" font-family="Arial, sans-serif" font-size="16" font-weight="800">BB</text>
+  <text x="32" y="44" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="7" font-weight="400">BANGLA</text>
+  <text x="32" y="54" text-anchor="middle" fill="#888888" font-family="Arial, sans-serif" font-size="6" font-weight="400">BAZAR</text>
+</svg>

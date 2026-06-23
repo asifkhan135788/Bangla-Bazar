@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  customer
+  admin
+  banned
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  processing
+  shipped
+  delivered
+  cancelled
+}
+
+enum PaymentMethod {
+  cod
+  bkash
+  nagad
+  rocket
+  card
+}
+
+enum SenderType {
+  customer
+  admin
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  email        String        @unique @db.Text
+  name         String?       @db.Text
+  phone        String?       @db.Text
+  address      String?       @db.Text
+  avatar       String?       @db.Text
+  role         UserRole      @default(customer)
+  banned       Boolean       @default(false)
+  bannedUntil  DateTime?     @db.Timestamptz()
+  password     String        @db.Text
+  createdAt    DateTime      @default(now()) @db.Timestamptz()
+  updatedAt    DateTime      @updatedAt @db.Timestamptz()
+
+  carts         Cart[]
+  orders        Order[]
+  logs          UserLog[]
+  reviews       Review[]
+  adminSessions AdminSession[]
+  sentMessages  ChatMessage[] @relation("SentMessages")
+
+  @@index([email])
+  @@index([role])
+  @@index([banned])
+  @@map("users")
+}
+
+model Category {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.Text
+  nameBN    String?  @db.Text
+  slug      String   @unique @db.Text
+  image     String?  @db.Text
+  icon      String?  @db.Text
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
+
+  products Product[]
+
+  @@index([active])
+  @@index([sortOrder])
+  @@map("categories")
+}
+
+model Product {
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String       @db.Text
+  nameBN        String?      @db.Text
+  description   String?      @db.Text
+  descriptionBN String?      @db.Text
+  price         Decimal      @db.Decimal(10, 2)
+  salePrice     Decimal?     @db.Decimal(10, 2)
+  categoryId    String       @db.Uuid @map("category")
+  images        String[]     @default([])
+  stock         Int          @default(0)
+  featured      Boolean      @default(false)
+  active        Boolean      @default(true)
+  sku           String?      @unique @db.Text
+  unit          String       @default("piece") @db.Text
+  tags          String[]     @default([])
+  rating        Decimal      @default(0) @db.Decimal(2, 1)
+  reviewCount   Int          @default(0)
+  buyCount      Int          @default(0)
+  createdAt     DateTime     @default(now()) @db.Timestamptz()
+  updatedAt     DateTime     @updatedAt @db.Timestamptz()
+
+  categoryRef  Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  cartItems    Cart[]
+  orderItems   OrderItem[]
+  reviews      Review[]
+  chatMessages ChatMessage[]
+
+  @@index([categoryId])
+  @@index([featured])
+  @@index([active])
+  @@index([price])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("products")
+}
+
+model Cart {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  productId String   @db.Uuid
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@map("cart")
+}
+
+model Order {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String        @db.Uuid
+  total          Decimal       @db.Decimal(10, 2)
+  status         OrderStatus   @default(pending)
+  address        String?       @db.Text
+  phone          String?       @db.Text
+  paymentMethod  PaymentMethod @default(cod)
+  transactionId  String?       @db.Text
+  note           String?       @db.Text
+  createdAt      DateTime      @default(now()) @db.Timestamptz()
+  updatedAt      DateTime      @updatedAt @db.Timestamptz()
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  orderItems  OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid()) @db.Uuid
+  orderId   String  @db.Uuid
+  productId String  @db.Uuid
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  name      String  @db.Text
+  image     String? @db.Text
+
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model Review {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  productId String   @db.Uuid
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("reviews")
+}
+
+model UserLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  action    String   @db.Text
+  details   String?  @db.Text
+  ip        String?  @db.Text
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("user_logs")
+}
+
+model AdminSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.Text
+  userId    String   @db.Uuid
+  expiresAt DateTime @db.Timestamptz()
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}
+
+model ChatMessage {
+  id         String     @id @default(uuid()) @db.Uuid
+  senderId   String     @db.Uuid
+  receiverId String?    @db.Text
+  productId  String?    @db.Uuid
+  message    String     @db.Text
+  senderType SenderType @default(customer)
+  read       Boolean    @default(false)
+  createdAt  DateTime   @default(now()) @db.Timestamptz()
+
+  sender     User       @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  product    Product?   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([productId])
+  @@index([createdAt])
+  @@index([read])
+  @@map("chat_messages")
+}
+
+model Settings {
+  key       String   @id @db.Text
+  value     Json
+  updatedAt DateTime @updatedAt @db.Timestamptz()
+
+  @@map("settings")
+}

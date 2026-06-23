@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background -->
+  <rect width="200" height="200" fill="white" fill-opacity="0"/>
+
+  <!-- Shopping cart outline -->
+  <g transform="translate(30, 30)">
+    <!-- Cart body -->
+    <path d="M10,10 L30,10 L48,85 L120,85" 
+          fill="none" stroke="#b0b0b0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Cart basket -->
+    <path d="M30,10 L38,10 L55,75 L120,75 L120,85 L55,85 Z" 
+          fill="#f0f0f0" stroke="#b0b0b0" stroke-width="3" stroke-linejoin="round"/>
+    <!-- Basket horizontal lines -->
+    <line x1="40" y1="35" x2="115" y2="35" stroke="#c8c8c8" stroke-width="1.5"/>
+    <line x1="43" y1="55" x2="118" y2="55" stroke="#c8c8c8" stroke-width="1.5"/>
+    <!-- Wheels -->
+    <circle cx="65" cy="98" r="9" fill="none" stroke="#b0b0b0" stroke-width="3"/>
+    <circle cx="65" cy="98" r="3" fill="#c8c8c8"/>
+    <circle cx="105" cy="98" r="9" fill="none" stroke="#b0b0b0" stroke-width="3"/>
+    <circle cx="105" cy="98" r="3" fill="#c8c8c8"/>
+    <!-- Handle -->
+    <path d="M120,85 L130,85" fill="none" stroke="#b0b0b0" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Sad face inside cart -->
+  <g transform="translate(75, 62)">
+    <!-- Face circle -->
+    <circle cx="0" cy="0" r="18" fill="none" stroke="#b0b0b0" stroke-width="2"/>
+    <!-- Sad eyes -->
+    <circle cx="-6" cy="-4" r="2.5" fill="#b0b0b0"/>
+    <circle cx="6" cy="-4" r="2.5" fill="#b0b0b0"/>
+    <!-- Sad mouth (frown) -->
+    <path d="M-7,8 Q0,3 7,8" fill="none" stroke="#b0b0b0" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- "Your cart is empty" text -->
+  <text x="100" y="160" text-anchor="middle" font-family="'Segoe UI', Arial, Helvetica, sans-serif" font-size="14" fill="#999" font-weight="500">
+    Your cart is empty
+  </text>
+
+  <!-- Small decorative dots -->
+  <circle cx="55" cy="155" r="2" fill="#ddd"/>
+  <circle cx="145" cy="155" r="2" fill="#ddd"/>
+</svg>

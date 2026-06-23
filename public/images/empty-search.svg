@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background -->
+  <rect width="200" height="200" fill="white" fill-opacity="0"/>
+
+  <!-- Magnifying glass -->
+  <g transform="translate(100, 75)">
+    <!-- Glass circle -->
+    <circle cx="0" cy="0" r="38" fill="#f5f5f5" stroke="#b0b0b0" stroke-width="4"/>
+    <!-- Inner glass shine -->
+    <path d="M-20,-20 Q-28,-5 -18,5" fill="none" stroke="#d0d0d0" stroke-width="2" stroke-linecap="round"/>
+    <!-- Handle -->
+    <line x1="27" y1="27" x2="58" y2="58" stroke="#b0b0b0" stroke-width="6" stroke-linecap="round"/>
+    <!-- Handle end cap -->
+    <circle cx="58" cy="58" r="4" fill="#b0b0b0"/>
+  </g>
+
+  <!-- Question mark inside glass -->
+  <g transform="translate(100, 72)">
+    <text x="0" y="8" text-anchor="middle" font-family="'Segoe UI', Arial, Helvetica, sans-serif" font-size="42" fill="#c0c0c0" font-weight="700">
+      ?
+    </text>
+  </g>
+
+  <!-- Small decorative search lines (suggesting missing results) -->
+  <g opacity="0.3">
+    <line x1="25" y1="130" x2="75" y2="130" stroke="#c8c8c8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="25" y1="140" x2="60" y2="140" stroke="#d8d8d8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="125" y1="130" x2="175" y2="130" stroke="#c8c8c8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="125" y1="140" x2="160" y2="140" stroke="#d8d8d8" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- "No results found" text -->
+  <text x="100" y="172" text-anchor="middle" font-family="'Segoe UI', Arial, Helvetica, sans-serif" font-size="14" fill="#999" font-weight="500">
+    No results found
+  </text>
+
+  <!-- Small decorative dots -->
+  <circle cx="55" cy="167" r="2" fill="#ddd"/>
+  <circle cx="145" cy="167" r="2" fill="#ddd"/>
+</svg>
