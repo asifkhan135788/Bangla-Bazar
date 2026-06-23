@@ -46,6 +46,7 @@ model User {
   role         UserRole      @default(customer)
   banned       Boolean       @default(false)
   bannedUntil  DateTime?     @db.Timestamptz()
+  password     String        @db.Text
   createdAt    DateTime      @default(now()) @db.Timestamptz()
   updatedAt    DateTime      @updatedAt @db.Timestamptz()
 

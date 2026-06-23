@@ -41,7 +41,7 @@ CREATE TYPE "SenderType" AS ENUM ('customer', 'admin');
 -- ║  @map() → কলামের নাম (যদি আলাদা হয়)                    ║
 -- ║                                                          ║
 -- ║  🔑 FIX #1: users.id → FK to auth.users(id)             ║
--- ║  🔑 FIX #2: password column removed (Supabase Auth)     ║
+-- ║  🔑 password column retained (custom bcrypt auth)      ║
 -- ╚══════════════════════════════════════════════════════════╝
 
 -- ────────────────────────────────────────────────────────────
@@ -51,9 +51,9 @@ CREATE TYPE "SenderType" AS ENUM ('customer', 'admin');
 --    Supabase Auth ব্যবহার করলে users.id = auth.users.id
 --    তাই gen_random_uuid() বাদ, REFERENCES auth.users(id) যোগ
 --
--- 🔑 FIX #2: password column সরানো হয়েছে
---    Supabase Auth নিজেই password manage করে
---    public.users এ password রাখার দরকার নেই
+-- 🔑 password column রাখা হয়েছে (custom bcrypt auth)
+--    অ্যাপটি custom bcrypt-based auth ব্যবহার করে
+--    ভবিষ্যতে Supabase Auth-তে migrate করলে সরানো যাবে
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS "users" (
   "id"          UUID        PRIMARY KEY REFERENCES auth.users("id") ON DELETE CASCADE,  -- FK to auth.users
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS "users" (
   "role"        "UserRole"  NOT NULL DEFAULT 'customer',              -- @default(customer)
   "banned"      BOOLEAN     NOT NULL DEFAULT false,                   -- @default(false)
   "bannedUntil" TIMESTAMPTZ,                                          -- DateTime? @db.Timestamptz()
-  -- "password" column REMOVED — Supabase Auth handles passwords
+  "password"    TEXT        NOT NULL,                                 -- @db.Text (bcrypt hash — custom auth)
   "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT now(),                   -- @default(now()) @db.Timestamptz()
   "updatedAt"   TIMESTAMPTZ NOT NULL DEFAULT now()                    -- @updatedAt @db.Timestamptz()
 );
@@ -438,7 +438,7 @@ END $$;
 
 -- ────────────────────────────────────────────────────────────
 -- 4.4 POLICIES: users
--- password column আর নেই, কিন্তু role/banned এখনো sensitive
+-- password column আছে (bcrypt hash), role/banned sensitive
 -- anon: কোনো access নেই
 -- authenticated: নিজের profile পড়া/আপডেট
 -- ────────────────────────────────────────────────────────────
