@@ -23,6 +23,9 @@ interface FieldErrors {
   name?: string
   phone?: string
   address?: string
+  zilla?: string
+  upazila?: string
+  home?: string
   paymentMethod?: string
   transactionId?: string
 }
@@ -40,12 +43,22 @@ export function CheckoutView() {
 
   const [name, setName] = useState(user?.name || '')
   const [phone, setPhone] = useState(user?.phone || '')
-  const [address, setAddress] = useState(user?.address || '')
+  const [zilla, setZilla] = useState('')
+  const [upazila, setUpazila] = useState('')
+  const [gram, setGram] = useState('')
+  const [home, setHome] = useState('')
+  const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [locationLoading, setLocationLoading] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [transactionId, setTransactionId] = useState('')
   const [note, setNote] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
+  const [orderSuccess, setOrderSuccess] = useState<{
+    orderId: string
+    total: number
+    paymentMethod: PaymentMethod
+  } | null>(null)
 
   // Payment settings from API
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
@@ -164,15 +177,60 @@ export function CheckoutView() {
   }
 
   const handleAddressChange = (value: string) => {
-    setAddress(value) // Bengali is OK for address
-    if (errors.address) setErrors(prev => ({ ...prev, address: undefined }))
+    // This is now unused, but kept for compatibility
+  }
+
+  // Get full address string from structured fields
+  const getFullAddress = () => {
+    const parts = [home, gram, upazila, zilla].filter(Boolean)
+    let addr = parts.join(', ')
+    if (liveLocation) {
+      addr += ` [Location: ${liveLocation.lat.toFixed(6)}, ${liveLocation.lng.toFixed(6)}]`
+    }
+    return addr
+  }
+
+  // Fetch live location
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+    setLocationLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLiveLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        })
+        setLocationLoading(false)
+        toast.success('Location captured successfully!')
+      },
+      (error) => {
+        setLocationLoading(false)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location permission denied. Please enable it in your browser settings.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location information unavailable.')
+            break
+          case error.TIMEOUT:
+            toast.error('Location request timed out.')
+            break
+          default:
+            toast.error('Failed to get location.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    )
   }
 
   const validate = (): boolean => {
     const result = checkoutPaymentSchema.safeParse({
       name,
       phone,
-      address,
+      address: getFullAddress(),
       paymentMethod,
       transactionId: transactionId || undefined,
       note: note || undefined,
@@ -180,6 +238,15 @@ export function CheckoutView() {
 
     if (result.success) {
       setErrors({})
+      // Additional validation for structured address
+      const addrErrors: FieldErrors = {}
+      if (!zilla.trim()) addrErrors.zilla = 'District (Zilla) is required'
+      if (!upazila.trim()) addrErrors.upazila = 'Upazila is required'
+      if (!home.trim()) addrErrors.home = 'Home/Holding number is required'
+      if (Object.keys(addrErrors).length > 0) {
+        setErrors(addrErrors)
+        return false
+      }
       return true
     }
 
@@ -210,7 +277,7 @@ export function CheckoutView() {
           userId: user.id,
           name,
           phone: formatBDPhone(phone),
-          address,
+          address: getFullAddress(),
           paymentMethod,
           transactionId: transactionId || undefined,
           note: note || undefined,
@@ -243,18 +310,120 @@ export function CheckoutView() {
         // Silently ignore telegram errors
       })
 
-      // Clear cart and navigate
+      // Clear cart and show success
       clearCart()
-      toast.success('Order placed successfully!')
-
-      // Navigate to profile/orders
-      navigate('profile')
+      setOrderSuccess({
+        orderId: orderData.order?.id?.slice(-8).toUpperCase() || 'N/A',
+        total,
+        paymentMethod,
+      })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Something went wrong'
       toast.error(message)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Order success screen
+  if (orderSuccess) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center justify-center min-h-[70vh] px-6 bg-background"
+      >
+        {/* Success Icon */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
+          className="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center mb-6"
+        >
+          <motion.svg
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#22c55e"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <motion.path
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              d="M20 6L9 17l-5-5"
+            />
+          </motion.svg>
+        </motion.div>
+
+        <motion.h2
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="text-2xl font-bold text-foreground mb-2"
+        >
+          Order Placed!
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="text-sm text-muted-foreground mb-6 text-center"
+        >
+          Your order has been placed successfully. We will process it shortly.
+        </motion.p>
+
+        {/* Order Details Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="w-full max-w-sm bg-card border border-border rounded-2xl p-5 mb-6"
+        >
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Order ID</span>
+              <span className="text-sm font-mono font-bold text-foreground">#{orderSuccess.orderId}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Total</span>
+              <span className="text-sm font-bold text-[#FFD700]">৳{orderSuccess.total.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Payment</span>
+              <span className="text-sm font-medium text-foreground capitalize">{orderSuccess.paymentMethod}</span>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="flex gap-3"
+        >
+          <button
+            onClick={() => navigate('profile')}
+            className="px-6 py-3 rounded-xl text-sm font-semibold bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D] transition-colors"
+          >
+            View Orders
+          </button>
+          <button
+            onClick={() => navigate('home')}
+            className="px-6 py-3 rounded-xl text-sm font-semibold border border-border bg-card text-foreground hover:bg-[#FFD700]/5 transition-colors"
+          >
+            Continue Shopping
+          </button>
+        </motion.div>
+      </motion.div>
+    )
   }
 
   return (
@@ -381,22 +550,100 @@ export function CheckoutView() {
             {errors.phone && <p className="text-xs mt-1 text-[#f42a41]">{errors.phone}</p>}
           </div>
 
-          {/* Address */}
+          {/* Address - Structured BD Format */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-foreground mb-1.5">
               Delivery Address <span className="text-[#f42a41]">*</span>
             </label>
-            <textarea
-              value={address}
-              onChange={(e) => handleAddressChange(e.target.value)}
-              placeholder="Enter your full delivery address (Bengali OK)"
-              rows={3}
-              className={`w-full px-4 py-3 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors resize-none bg-background ${
-                errors.address ? 'border border-[#f42a41]' : 'border border-border'
-              }`}
-            />
-            <p className="text-xs text-muted-foreground mt-1">Bengali text is allowed for delivery address</p>
-            {errors.address && <p className="text-xs mt-1 text-[#f42a41]">{errors.address}</p>}
+
+            {/* Zilla (District) */}
+            <div className="mb-2">
+              <input
+                type="text"
+                value={zilla}
+                onChange={(e) => { setZilla(e.target.value); if (errors.zilla) setErrors(prev => ({ ...prev, zilla: undefined })) }}
+                placeholder="জেলা / District (e.g. ঢাকা, চট্টগ্রাম)"
+                className={`w-full px-4 py-2.5 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background ${
+                  errors.zilla ? 'border border-[#f42a41]' : 'border border-border'
+                }`}
+              />
+              {errors.zilla && <p className="text-xs mt-1 text-[#f42a41]">{errors.zilla}</p>}
+            </div>
+
+            {/* Upazila */}
+            <div className="mb-2">
+              <input
+                type="text"
+                value={upazila}
+                onChange={(e) => { setUpazila(e.target.value); if (errors.upazila) setErrors(prev => ({ ...prev, upazila: undefined })) }}
+                placeholder="উপজেলা / Upazila (e.g. সদর, মিরপুর)"
+                className={`w-full px-4 py-2.5 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background ${
+                  errors.upazila ? 'border border-[#f42a41]' : 'border border-border'
+                }`}
+              />
+              {errors.upazila && <p className="text-xs mt-1 text-[#f42a41]">{errors.upazila}</p>}
+            </div>
+
+            {/* Gram (Village/Area) */}
+            <div className="mb-2">
+              <input
+                type="text"
+                value={gram}
+                onChange={(e) => setGram(e.target.value)}
+                placeholder="গ্রাম/এলাকা / Village/Area (optional)"
+                className="w-full px-4 py-2.5 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background border border-border"
+              />
+            </div>
+
+            {/* Home/Holding */}
+            <div className="mb-2">
+              <input
+                type="text"
+                value={home}
+                onChange={(e) => { setHome(e.target.value); if (errors.home) setErrors(prev => ({ ...prev, home: undefined })) }}
+                placeholder="বাড়ি/হোল্ডিং / Home & Holding No. *"
+                className={`w-full px-4 py-2.5 rounded-xl text-sm text-foreground placeholder-muted-foreground outline-none transition-colors bg-background ${
+                  errors.home ? 'border border-[#f42a41]' : 'border border-border'
+                }`}
+              />
+              {errors.home && <p className="text-xs mt-1 text-[#f42a41]">{errors.home}</p>}
+            </div>
+
+            {/* Live Location */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={handleGetLocation}
+                disabled={locationLoading}
+                className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 border border-[#FFD700]/40 bg-[#FFD700]/5 text-[#FFD700] hover:bg-[#FFD700]/10 transition-colors disabled:opacity-50"
+              >
+                {locationLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Getting Location...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    {liveLocation ? 'Update Live Location' : 'Add Live Location'}
+                  </>
+                )}
+              </button>
+              {liveLocation && (
+                <p className="text-xs text-green-500 mt-1 text-center">
+                  Location captured: {liveLocation.lat.toFixed(4)}, {liveLocation.lng.toFixed(4)}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1 text-center">
+                This uses your device GPS for accurate delivery location
+              </p>
+            </div>
           </div>
 
           {/* Note */}

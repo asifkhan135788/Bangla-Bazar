@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
@@ -19,6 +19,8 @@ import {
   Loader2,
   FileText,
   Info,
+  Camera,
+  Trash2,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth-store'
 import { useNavStore } from '@/store/nav-store'
@@ -63,6 +65,9 @@ export function ProfileView() {
   const [editPhone, setEditPhone] = useState('')
   const [editAddress, setEditAddress] = useState('')
   const [editLoading, setEditLoading] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!isAuthenticated || !user) return
@@ -142,6 +147,73 @@ export function ProfileView() {
     }
   }
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(language === 'en' ? 'Only JPEG, PNG, WebP, and GIF images are allowed' : 'শুধুমাত্র JPEG, PNG, WebP এবং GIF ছবি অনুমোদিত')
+      return
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(language === 'en' ? 'Image must be less than 2MB' : 'ছবি ২MB এর কম হতে হবে')
+      return
+    }
+
+    setAvatarUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      formData.append('userId', user.id)
+
+      const res = await fetch('/api/upload/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upload failed')
+      }
+
+      const data = await res.json()
+      updateUser({ avatar: data.avatarUrl })
+      toast.success(language === 'en' ? 'Profile picture updated!' : 'প্রোফাইল ছবি আপডেট হয়েছে!')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('error'))
+    } finally {
+      setAvatarUploading(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleAvatarDelete = async () => {
+    setAvatarUploading(true)
+    try {
+      const res = await fetch(`/api/upload/avatar?userId=${user.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to remove avatar')
+      }
+
+      updateUser({ avatar: null })
+      toast.success(language === 'en' ? 'Profile picture removed' : 'প্রোফাইল ছবি মুছে ফেলা হয়েছে')
+    } catch {
+      toast.error(t('error'))
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
   const handleLogout = () => {
     logout()
     navigate('home')
@@ -160,8 +232,7 @@ export function ProfileView() {
   }
 
   const statusLabel = (status: string) => {
-    const key = status as 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-    return t(key)
+    return t(status as 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled')
   }
 
   // Settings items
@@ -225,8 +296,54 @@ export function ProfileView() {
         className="bg-card rounded-2xl border border-border p-5 mb-4"
       >
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center text-[#0A0A0A] text-2xl font-bold shrink-0 border-2 border-[#FFD700] bg-[#FFD700]">
-            {userInitial}
+          {/* Avatar with upload */}
+          <div className="relative shrink-0">
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name || 'Profile'}
+                className="w-16 h-16 rounded-full object-cover border-2 border-[#FFD700]"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full flex items-center justify-center text-[#0A0A0A] text-2xl font-bold border-2 border-[#FFD700] bg-[#FFD700]">
+                {userInitial}
+              </div>
+            )}
+
+            {/* Camera overlay button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarUploading}
+              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#FFD700] flex items-center justify-center text-[#0A0A0A] shadow-md hover:bg-[#FFE44D] transition-colors disabled:opacity-50"
+              aria-label="Change profile picture"
+            >
+              {avatarUploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Camera className="h-3.5 w-3.5" />
+              )}
+            </button>
+
+            {/* Delete avatar button */}
+            {user.avatar && (
+              <button
+                onClick={handleAvatarDelete}
+                disabled={avatarUploading}
+                className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white shadow-md hover:bg-red-600 transition-colors disabled:opacity-50"
+                aria-label="Remove profile picture"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
           </div>
 
           <AnimatePresence mode="wait">

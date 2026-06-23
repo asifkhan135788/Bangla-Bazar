@@ -9,6 +9,7 @@ interface TransactionInfo {
   paymentMethod: 'bkash' | 'nagad' | 'cod' | 'rocket' | 'card'
   transactionId?: string
   items: string
+  agentNumber?: string
 }
 
 export async function sendTransactionAlert(info: TransactionInfo): Promise<boolean> {
@@ -31,6 +32,7 @@ export async function sendTransactionAlert(info: TransactionInfo): Promise<boole
     `Amount: ৳${info.amount.toLocaleString()}`,
     `Payment: ${methodLabel}`,
     info.transactionId ? `Txn ID: ${info.transactionId}` : '',
+    info.agentNumber ? `Agent: ${info.agentNumber}` : '',
     `Items: ${info.items}`,
     '━━━━━━━━━━━━━━━',
     `Time: ${new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' })}`,

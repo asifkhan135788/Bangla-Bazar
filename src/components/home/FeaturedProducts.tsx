@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
 import { ProductCard } from '@/components/products/ProductCard'
+import { ProductCardLoader } from '@/components/common/BrandedLoader'
 import { useNavStore } from '@/store/nav-store'
 import { useLangStore } from '@/store/lang-store'
 import { toNumber, safeJsonParse } from '@/lib/utils'
@@ -57,18 +57,7 @@ function normalizeProduct(raw: ProductApi): Product {
 }
 
 function ProductCardSkeleton() {
-  return (
-    <div className="rounded-xl bg-card shadow-sm border border-border overflow-hidden">
-      <Skeleton className="h-[200px] w-full rounded-none bg-input" />
-      <div className="p-3 space-y-2">
-        <Skeleton className="h-4 w-3/4 bg-input" />
-        <Skeleton className="h-3 w-1/2 bg-input" />
-        <Skeleton className="h-3 w-1/3 bg-input" />
-        <Skeleton className="h-5 w-2/5 bg-input" />
-        <Skeleton className="h-9 w-full rounded-lg bg-input" />
-      </div>
-    </div>
-  )
+  return <ProductCardLoader />
 }
 
 export default function FeaturedProducts() {

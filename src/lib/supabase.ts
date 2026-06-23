@@ -32,7 +32,7 @@ export function subscribeToChannel(
     .subscribe()
 }
 
-// Chat realtime
+// Chat realtime - listens for new messages addressed to this user
 export function subscribeToChat(
   userId: string,
   callback: (payload: Record<string, unknown>) => void
@@ -47,6 +47,41 @@ export function subscribeToChat(
       filter: `receiver_id=eq.${userId}`,
     }, callback)
     .subscribe()
+}
+
+// Typing indicator - uses Supabase Presence
+export function subscribeToTyping(
+  userId: string,
+  callback: (payload: { senderId: string; isTyping: boolean }) => void
+) {
+  if (!supabase) return null
+
+  const channel = supabase.channel('typing-indicators', {
+    config: { presence: { key: userId } },
+  })
+
+  channel.on('broadcast', { event: 'typing' }, (payload) => {
+    callback(payload.payload as { senderId: string; isTyping: boolean })
+  })
+
+  channel.subscribe()
+  return channel
+}
+
+// Broadcast typing status
+export function broadcastTyping(
+  senderId: string,
+  receiverId: string,
+  isTyping: boolean
+) {
+  if (!supabase) return
+
+  const channel = supabase.channel('typing-indicators')
+  channel.send({
+    type: 'broadcast',
+    event: 'typing',
+    payload: { senderId, receiverId, isTyping },
+  })
 }
 
 // Order realtime
@@ -77,6 +112,18 @@ export async function signInWithEmail(email: string, password: string) {
 export async function signUpWithEmail(email: string, password: string, metadata?: Record<string, string>) {
   if (!supabase) throw new Error('Supabase not configured')
   const { data, error } = await supabase.auth.signUp({ email, password, options: { data: metadata } })
+  if (error) throw error
+  return data
+}
+
+export async function signInWithGoogle() {
+  if (!supabase) throw new Error('Supabase not configured')
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/api/auth/google-callback`,
+    },
+  })
   if (error) throw error
   return data
 }

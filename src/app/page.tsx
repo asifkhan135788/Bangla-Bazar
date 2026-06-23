@@ -67,6 +67,32 @@ export default function Home() {
     }
   }, [login])
 
+  // Handle Google Auth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const authSuccess = params.get('auth_success')
+    const authError = params.get('auth_error')
+    const userData = params.get('user_data')
+
+    if (authSuccess && userData) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(userData))
+        if (parsed.user) {
+          login(parsed.user, parsed.token || '')
+        }
+      } catch {
+        // Ignore parse errors
+      }
+      // Clean URL
+      window.history.replaceState({}, '', '/')
+    }
+
+    if (authError) {
+      console.error('Auth error:', authError)
+      window.history.replaceState({}, '', '/')
+    }
+  }, [login])
+
   // Check if ban has expired on mount
   useEffect(() => {
     if (isAuthenticated && user?.id) {

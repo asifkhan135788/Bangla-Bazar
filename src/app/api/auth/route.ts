@@ -149,14 +149,16 @@ export async function POST(request: Request) {
         },
       })
 
-      // Log registration
+      // Log registration with real IP and user agent
+      const clientIP = getClientIP(request)
+      const userAgent = request.headers.get('user-agent') || undefined
       await db.userLog.create({
         data: {
           userId: user.id,
           action: 'register',
-          details: 'New user registered',
-          ip: getClientIP(request),
-          userAgent: request.headers.get('user-agent') || undefined,
+          details: `New user registered from IP: ${clientIP}`,
+          ip: clientIP,
+          userAgent,
         },
       })
 

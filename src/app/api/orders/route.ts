@@ -108,10 +108,24 @@ export async function POST(request: Request) {
     const completeOrder = await db.order.findUnique({ where: { id: order.id }, include: { orderItems: true } })
     const user = await db.user.findUnique({ where: { id: userId }, select: { name: true } })
 
+    // Get random agent number if available
+    let agentNumber: string | undefined
+    try {
+      const agentSetting = await db.settings.findUnique({ where: { key: 'agent_numbers' } })
+      if (agentSetting?.value && Array.isArray(agentSetting.value) && agentSetting.value.length > 0) {
+        const agents = agentSetting.value as Array<{ name: string; phone: string }>
+        const randomAgent = agents[Math.floor(Math.random() * agents.length)]
+        agentNumber = randomAgent.phone
+      }
+    } catch {
+      // Ignore - agents not configured
+    }
+
     sendTransactionAlert({
       orderId: order.id, customerName: user?.name || phone || 'Unknown', customerPhone: phone || 'N/A',
       amount: Number(total), paymentMethod: paymentMethod || 'cod', transactionId: body.transactionId,
       items: orderItemsData.map(i => `${i.name} x${i.quantity}`).join(', '),
+      agentNumber,
     }).catch(() => {})
 
     return NextResponse.json({ order: completeOrder, message: 'Order placed successfully' }, { status: 201, headers })

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Skeleton } from '@/components/ui/skeleton'
+import { CategoryCardLoader } from '@/components/common/BrandedLoader'
 import { useNavStore } from '@/store/nav-store'
 
 interface Category {
@@ -14,13 +14,7 @@ interface Category {
 }
 
 function CategoryCardSkeleton() {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-xl bg-card p-6 border border-border">
-      <Skeleton className="h-12 w-12 rounded-full mb-3 bg-input" />
-      <Skeleton className="h-4 w-20 mb-1 bg-input" />
-      <Skeleton className="h-3 w-16 bg-input" />
-    </div>
-  )
+  return <CategoryCardLoader />
 }
 
 function CategoryIcon({ icon, name }: { icon?: string; name: string }) {

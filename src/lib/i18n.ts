@@ -159,6 +159,8 @@ const translations = {
     support: 'Support',
     seller: 'Seller',
     you: 'You',
+    online: 'Online',
+    conversations: 'Conversations',
 
     // ── Banned ──
     accountBanned: 'Account Banned',
@@ -346,6 +348,8 @@ const translations = {
     support: 'সাপোর্ট',
     seller: 'সেলার',
     you: 'আপনি',
+    online: 'অনলাইন',
+    conversations: 'কথোপকথন',
 
     // ── Banned ──
     accountBanned: 'অ্যাকাউন্ট নিষিদ্ধ',

@@ -1,0 +1,926 @@
+     1→-- ============================================================
+     2→-- 🏪 Bangla Bazar — supabase.sql
+     3→-- ============================================================
+     4→-- Prisma Schema থেকে তৈরি: prisma/schema.prisma
+     5→-- Database: PostgreSQL (Supabase)
+     6→-- Auth: Supabase Auth (auth.users) integration
+     7→-- Security: Row Level Security (RLS) — সব টেবিলে সক্রিয়
+     8→--
+     9→-- ⚠️  পুরো স্ক্রিপ্ট Supabase SQL Editor-এ রান করুন
+    10→-- ⚠️  ক্রম অনুসারে রান করুন — enums → tables → triggers → RLS → auth
+    11→-- ============================================================
+    12→
+    13→
+    14→-- ╔══════════════════════════════════════════════════════════╗
+    15→-- ║  PHASE 1: ENUM TYPES (Prisma enum → PostgreSQL enum)    ║
+    16→-- ╚══════════════════════════════════════════════════════════╝
+    17→
+    18→DO $$ BEGIN
+    19→  DROP TYPE IF EXISTS "SenderType" CASCADE;
+    20→  DROP TYPE IF EXISTS "PaymentMethod" CASCADE;
+    21→  DROP TYPE IF EXISTS "OrderStatus" CASCADE;
+    22→  DROP TYPE IF EXISTS "UserRole" CASCADE;
+    23→END $$;
+    24→
+    25→-- Prisma: enum UserRole { customer, admin, banned }
+    26→CREATE TYPE "UserRole" AS ENUM ('customer', 'admin', 'banned');
+    27→
+    28→-- Prisma: enum OrderStatus { pending, confirmed, processing, shipped, delivered, cancelled }
+    29→CREATE TYPE "OrderStatus" AS ENUM ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled');
+    30→
+    31→-- Prisma: enum PaymentMethod { cod, bkash, nagad, rocket, card }
+    32→CREATE TYPE "PaymentMethod" AS ENUM ('cod', 'bkash', 'nagad', 'rocket', 'card');
+    33→
+    34→-- Prisma: enum SenderType { customer, admin }
+    35→CREATE TYPE "SenderType" AS ENUM ('customer', 'admin');
+    36→
+    37→
+    38→-- ╔══════════════════════════════════════════════════════════╗
+    39→-- ║  PHASE 2: TABLES (Prisma model → PostgreSQL table)      ║
+    40→-- ║  @@map() → টেবিলের নাম                                  ║
+    41→-- ║  @map() → কলামের নাম (যদি আলাদা হয়)                    ║
+    42→-- ║                                                          ║
+    43→-- ║  🔑 Uses gen_random_uuid() — no auth.users FK (custom auth) ║
+    44→-- ║  🔑 password column retained (custom bcrypt auth)      ║
+    45→-- ╚══════════════════════════════════════════════════════════╝
+    46→
+    47→-- ────────────────────────────────────────────────────────────
+    48→-- Prisma Model: User → Table: users (@@map("users"))
+    49→--
+    50→-- 🔑 users.id: gen_random_uuid() (custom bcrypt auth, no auth.users FK)
+    51→--    অ্যাপটি custom bcrypt-based auth ব্যবহার করে
+    52→--    ভবিষ্যতে Supabase Auth-তে migrate করলে FK যোগ করা যাবে
+    53→--
+    54→-- 🔑 password column রাখা হয়েছে (custom bcrypt auth)
+    55→--    অ্যাপটি custom bcrypt-based auth ব্যবহার করে
+    56→--    ভবিষ্যতে Supabase Auth-তে migrate করলে সরানো যাবে
+    57→-- ────────────────────────────────────────────────────────────
+    58→CREATE TABLE IF NOT EXISTS "users" (
+    59→  "id"          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),  -- @id @default(uuid()) @db.Uuid
+    60→  "email"       TEXT        NOT NULL UNIQUE,                          -- @unique @db.Text
+    61→  "name"        TEXT,                                                 -- String? @db.Text
+    62→  "phone"       TEXT,                                                 -- String? @db.Text
+    63→  "address"     TEXT,                                                 -- String? @db.Text
+    64→  "avatar"      TEXT,                                                 -- String? @db.Text
+    65→  "role"        "UserRole"  NOT NULL DEFAULT 'customer',              -- @default(customer)
+    66→  "banned"      BOOLEAN     NOT NULL DEFAULT false,                   -- @default(false)
+    67→  "bannedUntil" TIMESTAMPTZ,                                          -- DateTime? @db.Timestamptz()
+    68→  "password"    TEXT        NOT NULL,                                 -- @db.Text (bcrypt hash — custom auth)
+    69→  "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT now(),                   -- @default(now()) @db.Timestamptz()
+    70→  "updatedAt"   TIMESTAMPTZ NOT NULL DEFAULT now()                    -- @updatedAt @db.Timestamptz()
+    71→);
+    72→
+    73→-- Prisma @@index([email])
+    74→CREATE INDEX IF NOT EXISTS "users_email_idx"  ON "users" ("email");
+    75→-- Prisma @@index([role])
+    76→CREATE INDEX IF NOT EXISTS "users_role_idx"   ON "users" ("role");
+    77→-- Prisma @@index([banned])
+    78→CREATE INDEX IF NOT EXISTS "users_banned_idx" ON "users" ("banned");
+    79→
+    80→
+    81→-- ────────────────────────────────────────────────────────────
+    82→-- Prisma Model: Category → Table: categories (@@map("categories"))
+    83→-- ────────────────────────────────────────────────────────────
+    84→CREATE TABLE IF NOT EXISTS "categories" (
+    85→  "id"        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+    86→  "name"      TEXT        NOT NULL,                                 -- @db.Text
+    87→  "nameBN"    TEXT,                                                 -- String? @db.Text
+    88→  "slug"      TEXT        NOT NULL UNIQUE,                          -- @unique @db.Text
+    89→  "image"     TEXT,                                                 -- String? @db.Text
+    90→  "icon"      TEXT,                                                 -- String? @db.Text
+    91→  "sortOrder" INTEGER     NOT NULL DEFAULT 0,                       -- @default(0)
+    92→  "active"    BOOLEAN     NOT NULL DEFAULT true,                    -- @default(true)
+    93→  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),                   -- @default(now()) @db.Timestamptz()
+    94→  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()                    -- @updatedAt @db.Timestamptz()
+    95→);
+    96→
+    97→-- Prisma @@index([active])
+    98→CREATE INDEX IF NOT EXISTS "categories_active_idx"    ON "categories" ("active");
+    99→-- Prisma @@index([sortOrder])
+   100→CREATE INDEX IF NOT EXISTS "categories_sortOrder_idx" ON "categories" ("sortOrder");
+   101→
+   102→
+   103→-- ────────────────────────────────────────────────────────────
+   104→-- Prisma Model: Product → Table: products (@@map("products"))
+   105→-- ────────────────────────────────────────────────────────────
+   106→CREATE TABLE IF NOT EXISTS "products" (
+   107→  "id"            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+   108→  "name"          TEXT          NOT NULL,                                 -- @db.Text
+   109→  "nameBN"        TEXT,                                                   -- String? @db.Text
+   110→  "description"   TEXT,                                                   -- String? @db.Text
+   111→  "descriptionBN" TEXT,                                                   -- String? @db.Text
+   112→  "price"         DECIMAL(10,2) NOT NULL,                                -- @db.Decimal(10, 2)
+   113→  "salePrice"     DECIMAL(10,2),                                         -- Decimal? @db.Decimal(10, 2)
+   114→  "categoryId"   UUID          NOT NULL REFERENCES "categories"("id") ON DELETE RESTRICT,  -- categoryId → Restrict
+   115→  "images"        TEXT[]        NOT NULL DEFAULT '{}',                   -- String[] @default([])
+   116→  "stock"         INTEGER       NOT NULL DEFAULT 0,                      -- @default(0)
+   117→  "featured"      BOOLEAN       NOT NULL DEFAULT false,                  -- @default(false)
+   118→  "active"        BOOLEAN       NOT NULL DEFAULT true,                   -- @default(true)
+   119→  "sku"           TEXT          UNIQUE,                                   -- @unique @db.Text
+   120→  "unit"          TEXT          NOT NULL DEFAULT 'piece',                -- @default("piece") @db.Text
+   121→  "tags"          TEXT[]        NOT NULL DEFAULT '{}',                   -- String[] @default([])
+   122→  "rating"        DECIMAL(2,1)  NOT NULL DEFAULT 0,                      -- @default(0) @db.Decimal(2, 1)
+   123→  "reviewCount"   INTEGER       NOT NULL DEFAULT 0,                      -- @default(0)
+   124→  "buyCount"      INTEGER       NOT NULL DEFAULT 0,                      -- @default(0)
+   125→  "createdAt"     TIMESTAMPTZ   NOT NULL DEFAULT now(),                  -- @default(now()) @db.Timestamptz()
+   126→  "updatedAt"     TIMESTAMPTZ   NOT NULL DEFAULT now()                   -- @updatedAt @db.Timestamptz()
+   127→);
+   128→
+   129→-- Prisma @@index([categoryId])
+   130→CREATE INDEX IF NOT EXISTS "products_categoryId_idx" ON "products" ("categoryId");
+   131→-- Prisma @@index([featured])
+   132→CREATE INDEX IF NOT EXISTS "products_featured_idx"   ON "products" ("featured");
+   133→-- Prisma @@index([active])
+   134→CREATE INDEX IF NOT EXISTS "products_active_idx"     ON "products" ("active");
+   135→-- Prisma @@index([price])
+   136→CREATE INDEX IF NOT EXISTS "products_price_idx"      ON "products" ("price");
+   137→-- Prisma @@index([rating])
+   138→CREATE INDEX IF NOT EXISTS "products_rating_idx"     ON "products" ("rating");
+   139→-- Prisma @@index([createdAt])
+   140→CREATE INDEX IF NOT EXISTS "products_createdAt_idx"  ON "products" ("createdAt");
+   141→
+   142→
+   143→-- ────────────────────────────────────────────────────────────
+   144→-- Prisma Model: Cart → Table: cart (@@map("cart"))
+   145→-- ────────────────────────────────────────────────────────────
+   146→CREATE TABLE IF NOT EXISTS "cart" (
+   147→  "id"        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+   148→  "userId"    UUID        NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,      -- onDelete: Cascade
+   149→  "productId" UUID        NOT NULL REFERENCES "products"("id") ON DELETE CASCADE,   -- onDelete: Cascade
+   150→  "quantity"  INTEGER     NOT NULL DEFAULT 1,                       -- @default(1)
+   151→  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),                   -- @default(now()) @db.Timestamptz()
+   152→  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),                   -- @updatedAt @db.Timestamptz()
+   153→
+   154→  -- Prisma @@unique([userId, productId])
+   155→  CONSTRAINT "cart_userId_productId_key" UNIQUE ("userId", "productId")
+   156→);
+   157→
+   158→-- Prisma @@index([userId])
+   159→CREATE INDEX IF NOT EXISTS "cart_userId_idx"    ON "cart" ("userId");
+   160→-- Prisma @@index([productId])
+   161→CREATE INDEX IF NOT EXISTS "cart_productId_idx" ON "cart" ("productId");
+   162→
+   163→
+   164→-- ────────────────────────────────────────────────────────────
+   165→-- Prisma Model: Order → Table: orders (@@map("orders"))
+   166→-- ────────────────────────────────────────────────────────────
+   167→CREATE TABLE IF NOT EXISTS "orders" (
+   168→  "id"             UUID            PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+   169→  "userId"         UUID            NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,  -- onDelete: Restrict
+   170→  "total"          DECIMAL(10,2)   NOT NULL,                                -- @db.Decimal(10, 2)
+   171→  "status"         "OrderStatus"   NOT NULL DEFAULT 'pending',              -- @default(pending)
+   172→  "address"        TEXT,                                                    -- String? @db.Text
+   173→  "phone"          TEXT,                                                    -- String? @db.Text
+   174→  "paymentMethod"  "PaymentMethod" NOT NULL DEFAULT 'cod',                  -- @default(cod)
+   175→  "transactionId"  TEXT,                                                    -- String? @db.Text
+   176→  "note"           TEXT,                                                    -- String? @db.Text
+   177→  "createdAt"      TIMESTAMPTZ     NOT NULL DEFAULT now(),                  -- @default(now()) @db.Timestamptz()
+   178→  "updatedAt"      TIMESTAMPTZ     NOT NULL DEFAULT now()                   -- @updatedAt @db.Timestamptz()
+   179→);
+   180→
+   181→-- Prisma @@index([userId])
+   182→CREATE INDEX IF NOT EXISTS "orders_userId_idx"     ON "orders" ("userId");
+   183→-- Prisma @@index([status])
+   184→CREATE INDEX IF NOT EXISTS "orders_status_idx"     ON "orders" ("status");
+   185→-- Prisma @@index([createdAt])
+   186→CREATE INDEX IF NOT EXISTS "orders_createdAt_idx"  ON "orders" ("createdAt");
+   187→
+   188→
+   189→-- ────────────────────────────────────────────────────────────
+   190→-- Prisma Model: OrderItem → Table: order_items (@@map("order_items"))
+   191→-- ────────────────────────────────────────────────────────────
+   192→CREATE TABLE IF NOT EXISTS "order_items" (
+   193→  "id"        UUID          PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+   194→  "orderId"   UUID          NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,     -- onDelete: Cascade
+   195→  "productId" UUID          NOT NULL REFERENCES "products"("id") ON DELETE RESTRICT,  -- onDelete: Restrict
+   196→  "quantity"  INTEGER       NOT NULL,                                 -- Int
+   197→  "price"     DECIMAL(10,2) NOT NULL,                                -- @db.Decimal(10, 2)
+   198→  "name"      TEXT          NOT NULL,                                 -- @db.Text
+   199→  "image"     TEXT                                                   -- String? @db.Text
+   200→);
+   201→
+   202→-- Prisma @@index([orderId])
+   203→CREATE INDEX IF NOT EXISTS "order_items_orderId_idx"   ON "order_items" ("orderId");
+   204→-- Prisma @@index([productId])
+   205→CREATE INDEX IF NOT EXISTS "order_items_productId_idx" ON "order_items" ("productId");
+   206→
+   207→
+   208→-- ────────────────────────────────────────────────────────────
+   209→-- Prisma Model: Review → Table: reviews (@@map("reviews"))
+   210→-- ────────────────────────────────────────────────────────────
+   211→CREATE TABLE IF NOT EXISTS "reviews" (
+   212→  "id"        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+   213→  "userId"    UUID        NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,      -- onDelete: Cascade
+   214→  "productId" UUID        NOT NULL REFERENCES "products"("id") ON DELETE CASCADE,   -- onDelete: Cascade
+   215→  "rating"    INTEGER     NOT NULL,                                 -- Int
+   216→  "comment"   TEXT,                                                 -- String? @db.Text
+   217→  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),                   -- @default(now()) @db.Timestamptz()
+   218→
+   219→  -- Prisma @@unique([userId, productId])
+   220→  CONSTRAINT "reviews_userId_productId_key" UNIQUE ("userId", "productId")
+   221→);
+   222→
+   223→-- Prisma @@index([productId])
+   224→CREATE INDEX IF NOT EXISTS "reviews_productId_idx"   ON "reviews" ("productId");
+   225→-- Prisma @@index([rating])
+   226→CREATE INDEX IF NOT EXISTS "reviews_rating_idx"      ON "reviews" ("rating");
+   227→-- Prisma @@index([createdAt])
+   228→CREATE INDEX IF NOT EXISTS "reviews_createdAt_idx"   ON "reviews" ("createdAt");
+   229→
+   230→
+   231→-- ────────────────────────────────────────────────────────────
+   232→-- Prisma Model: UserLog → Table: user_logs (@@map("user_logs"))
+   233→-- ────────────────────────────────────────────────────────────
+   234→CREATE TABLE IF NOT EXISTS "user_logs" (
+   235→  "id"        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+   236→  "userId"    UUID        REFERENCES "users"("id") ON DELETE SET NULL,  -- onDelete: SetNull
+   237→  "action"    TEXT        NOT NULL,                                 -- @db.Text
+   238→  "details"   TEXT,                                                 -- String? @db.Text
+   239→  "ip"        TEXT,                                                 -- String? @db.Text
+   240→  "userAgent" TEXT,                                                 -- String? @db.Text
+   241→  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now()                    -- @default(now()) @db.Timestamptz()
+   242→);
+   243→
+   244→-- Prisma @@index([userId])
+   245→CREATE INDEX IF NOT EXISTS "user_logs_userId_idx"    ON "user_logs" ("userId");
+   246→-- Prisma @@index([action])
+   247→CREATE INDEX IF NOT EXISTS "user_logs_action_idx"    ON "user_logs" ("action");
+   248→-- Prisma @@index([createdAt])
+   249→CREATE INDEX IF NOT EXISTS "user_logs_createdAt_idx" ON "user_logs" ("createdAt");
+   250→
+   251→
+   252→-- ────────────────────────────────────────────────────────────
+   253→-- Prisma Model: AdminSession → Table: admin_sessions (@@map("admin_sessions"))
+   254→-- ────────────────────────────────────────────────────────────
+   255→CREATE TABLE IF NOT EXISTS "admin_sessions" (
+   256→  "id"        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+   257→  "token"     TEXT        NOT NULL UNIQUE,                          -- @unique @db.Text
+   258→  "userId"    UUID        NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,  -- onDelete: Cascade
+   259→  "expiresAt" TIMESTAMPTZ NOT NULL,                                 -- @db.Timestamptz()
+   260→  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now()                    -- @default(now()) @db.Timestamptz()
+   261→);
+   262→
+   263→-- Prisma @@index([token])
+   264→CREATE INDEX IF NOT EXISTS "admin_sessions_token_idx"     ON "admin_sessions" ("token");
+   265→-- Prisma @@index([userId])
+   266→CREATE INDEX IF NOT EXISTS "admin_sessions_userId_idx"    ON "admin_sessions" ("userId");
+   267→-- Prisma @@index([expiresAt])
+   268→CREATE INDEX IF NOT EXISTS "admin_sessions_expiresAt_idx" ON "admin_sessions" ("expiresAt");
+   269→
+   270→
+   271→-- ────────────────────────────────────────────────────────────
+   272→-- Prisma Model: ChatMessage → Table: chat_messages (@@map("chat_messages"))
+   273→-- ────────────────────────────────────────────────────────────
+   274→CREATE TABLE IF NOT EXISTS "chat_messages" (
+   275→  "id"         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
+   276→  "senderId"   UUID         NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,     -- onDelete: Cascade
+   277→  "receiverId" UUID REFERENCES "users"("id") ON DELETE CASCADE,          -- 🔑 FK to users.id (onDelete: Cascade)
+   278→  "productId"  UUID         REFERENCES "products"("id") ON DELETE CASCADE,           -- onDelete: Cascade
+   279→  "message"    TEXT         NOT NULL,                                  -- @db.Text
+   280→  "senderType" "SenderType" NOT NULL DEFAULT 'customer',              -- @default(customer)
+   281→  "read"       BOOLEAN      NOT NULL DEFAULT false,                   -- @default(false)
+   282→  "createdAt"  TIMESTAMPTZ  NOT NULL DEFAULT now()                    -- @default(now()) @db.Timestamptz()
+   283→);
+   284→
+   285→-- Prisma @@index([senderId])
+   286→CREATE INDEX IF NOT EXISTS "chat_messages_senderId_idx"   ON "chat_messages" ("senderId");
+   287→-- Prisma @@index([receiverId])
+   288→CREATE INDEX IF NOT EXISTS "chat_messages_receiverId_idx" ON "chat_messages" ("receiverId");
+   289→-- Prisma @@index([productId])
+   290→CREATE INDEX IF NOT EXISTS "chat_messages_productId_idx"  ON "chat_messages" ("productId");
+   291→-- Prisma @@index([createdAt])
+   292→CREATE INDEX IF NOT EXISTS "chat_messages_createdAt_idx"  ON "chat_messages" ("createdAt");
+   293→-- Prisma @@index([read])
+   294→CREATE INDEX IF NOT EXISTS "chat_messages_read_idx"       ON "chat_messages" ("read");
+   295→
+   296→
+   297→-- ────────────────────────────────────────────────────────────
+   298→-- Prisma Model: Settings → Table: settings (@@map("settings"))
+   299→-- ────────────────────────────────────────────────────────────
+   300→CREATE TABLE IF NOT EXISTS "settings" (
+   301→  "key"       TEXT        PRIMARY KEY,                               -- @id @db.Text
+   302→  "value"     JSONB       NOT NULL,                                  -- Json
+   303→  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()                     -- @updatedAt @db.Timestamptz()
+   304→);
+   305→
+   306→
+   307→-- ╔══════════════════════════════════════════════════════════╗
+   308→-- ║  PHASE 3: TRIGGERS (Prisma @updatedAt → auto-update)    ║
+   309→-- ╚══════════════════════════════════════════════════════════╝
+   310→
+   311→CREATE OR REPLACE FUNCTION "update_updated_at_column"()
+   312→RETURNS TRIGGER AS $$
+   313→BEGIN
+   314→  NEW."updatedAt" = now();
+   315→  RETURN NEW;
+   316→END;
+   317→$$ LANGUAGE plpgsql;
+   318→
+   319→DO $$ BEGIN
+   320→  CREATE TRIGGER "users_updated_at"      BEFORE UPDATE ON "users"      FOR EACH ROW EXECUTE FUNCTION "update_updated_at_column"();
+   321→  CREATE TRIGGER "categories_updated_at" BEFORE UPDATE ON "categories" FOR EACH ROW EXECUTE FUNCTION "update_updated_at_column"();
+   322→  CREATE TRIGGER "products_updated_at"   BEFORE UPDATE ON "products"  FOR EACH ROW EXECUTE FUNCTION "update_updated_at_column"();
+   323→  CREATE TRIGGER "cart_updated_at"       BEFORE UPDATE ON "cart"       FOR EACH ROW EXECUTE FUNCTION "update_updated_at_column"();
+   324→  CREATE TRIGGER "orders_updated_at"     BEFORE UPDATE ON "orders"     FOR EACH ROW EXECUTE FUNCTION "update_updated_at_column"();
+   325→  CREATE TRIGGER "settings_updated_at"   BEFORE UPDATE ON "settings"  FOR EACH ROW EXECUTE FUNCTION "update_updated_at_column"();
+   326→EXCEPTION WHEN others THEN
+   327→  NULL; -- Triggers already exist
+   328→END $$;
+   329→
+   330→
+   331→-- ╔══════════════════════════════════════════════════════════╗
+   332→-- ║  PHASE 3.5: AUTO-SYNC TRIGGER                           ║
+   333→-- ║  যখন Supabase Auth এ নতুন user signup করে,             ║
+   334→-- ║  স্বয়ংক্রিয়ভাবে public.users এ row তৈরি হবে           ║
+   335→-- ╚══════════════════════════════════════════════════════════╝
+   336→
+   337→-- ╔══════════════════════════════════════════════════════════╗
+   338→-- ║  PHASE 3.5: COMMENTED OUT — Supabase Auth triggers       ║
+   339→-- ║  Currently using custom bcrypt auth. Uncomment when      ║
+   340→-- ║  migrating to Supabase Auth.                             ║
+   341→-- ╚══════════════════════════════════════════════════════════╝
+   342→
+   343→-- CREATE OR REPLACE FUNCTION "public_handle_new_user"()
+   344→-- RETURNS TRIGGER
+   345→-- LANGUAGE plpgsql
+   346→-- SECURITY DEFINER
+   347→-- SET search_path = public
+   348→-- AS $$
+   349→-- BEGIN
+   350→--   INSERT INTO "users" ("id", "email", "name", "role")
+   351→--   VALUES (
+   352→--     NEW.id,
+   353→--     NEW.email,
+   354→--     COALESCE(NEW.raw_user_meta_data ->> 'name', split_part(NEW.email, '@', 1)),
+   355→--     COALESCE((NEW.raw_user_meta_data ->> 'role')::"UserRole", 'customer')
+   356→--   )
+   357→--   ON CONFLICT ("id") DO NOTHING;
+   358→--   RETURN NEW;
+   359→-- END;
+   360→-- $$;
+   361→
+   362→-- DROP TRIGGER IF EXISTS "on_auth_user_created" ON auth.users;
+   363→-- CREATE TRIGGER "on_auth_user_created"
+   364→--   AFTER INSERT ON auth.users
+   365→--   FOR EACH ROW EXECUTE FUNCTION "public_handle_new_user"();
+   366→
+   367→
+   368→-- ╔══════════════════════════════════════════════════════════╗
+   369→-- ║  PHASE 4: ROW LEVEL SECURITY (RLS) + POLICIES          ║
+   370→-- ║                                                          ║
+   371→-- ║  🔑 FIX #3: orders এ USING(true) বাদ → proper RLS      ║
+   372→-- ║  🔑 FIX #4: chat_messages এ USING(true) বাদ → proper RLS║
+   373→-- ╚══════════════════════════════════════════════════════════╝
+   374→
+   375→-- ────────────────────────────────────────────────────────────
+   376→-- 4.1 Enable RLS on ALL tables
+   377→-- ────────────────────────────────────────────────────────────
+   378→ALTER TABLE "users"          ENABLE ROW LEVEL SECURITY;
+   379→ALTER TABLE "categories"     ENABLE ROW LEVEL SECURITY;
+   380→ALTER TABLE "products"       ENABLE ROW LEVEL SECURITY;
+   381→ALTER TABLE "cart"           ENABLE ROW LEVEL SECURITY;
+   382→ALTER TABLE "orders"         ENABLE ROW LEVEL SECURITY;
+   383→ALTER TABLE "order_items"    ENABLE ROW LEVEL SECURITY;
+   384→ALTER TABLE "reviews"        ENABLE ROW LEVEL SECURITY;
+   385→ALTER TABLE "user_logs"      ENABLE ROW LEVEL SECURITY;
+   386→ALTER TABLE "admin_sessions" ENABLE ROW LEVEL SECURITY;
+   387→ALTER TABLE "chat_messages"  ENABLE ROW LEVEL SECURITY;
+   388→ALTER TABLE "settings"       ENABLE ROW LEVEL SECURITY;
+   389→
+   390→
+   391→-- ────────────────────────────────────────────────────────────
+   392→-- 4.2 Helper functions for RLS policies
+   393→-- ────────────────────────────────────────────────────────────
+   394→
+   395→-- চেক করে বর্তমান user admin কিনা
+   396→-- 🔑 FIX #2: SET search_path = public (search_path injection protection)
+   397→CREATE OR REPLACE FUNCTION "is_admin"()
+   398→RETURNS BOOLEAN
+   399→LANGUAGE sql
+   400→SECURITY DEFINER
+   401→SET search_path = public
+   402→STABLE
+   403→AS $$
+   404→  SELECT EXISTS (
+   405→    SELECT 1 FROM "users"
+   406→    WHERE "id" = auth.uid()
+   407→    AND "role" = 'admin'
+   408→  );
+   409→$$;
+   410→
+   411→-- চেক করে user banned কিনা
+   412→-- 🔑 FIX #2: SET search_path = public (search_path injection protection)
+   413→CREATE OR REPLACE FUNCTION "is_not_banned"()
+   414→RETURNS BOOLEAN
+   415→LANGUAGE sql
+   416→SECURITY DEFINER
+   417→SET search_path = public
+   418→STABLE
+   419→AS $$
+   420→  SELECT EXISTS (
+   421→    SELECT 1 FROM "users"
+   422→    WHERE "id" = auth.uid()
+   423→    AND "banned" = false
+   424→    AND ("bannedUntil" IS NULL OR "bannedUntil" < now())
+   425→  );
+   426→$$;
+   427→
+   428→
+   429→-- ────────────────────────────────────────────────────────────
+   430→-- 4.3 আগের সব policies ড্রপ (idempotent)
+   431→-- ────────────────────────────────────────────────────────────
+   432→DO $$ DECLARE
+   433→  r RECORD;
+   434→BEGIN
+   435→  FOR r IN (
+   436→    SELECT schemaname, policyname, tablename
+   437→    FROM pg_policies
+   438→    WHERE schemaname = 'public'
+   439→  ) LOOP
+   440→    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', r.policyname, r.schemaname, r.tablename);
+   441→  END LOOP;
+   442→END $$;
+   443→
+   444→
+   445→-- ────────────────────────────────────────────────────────────
+   446→-- 4.4 POLICIES: users
+   447→-- password column আছে (bcrypt hash), role/banned sensitive
+   448→-- anon: কোনো access নেই
+   449→-- authenticated: নিজের profile পড়া/আপডেট
+   450→-- ────────────────────────────────────────────────────────────
+   451→
+   452→-- anon: সম্পূর্ণ ব্লক
+   453→CREATE POLICY "users_anon_deny_all" ON "users"
+   454→  FOR ALL USING (false) WITH CHECK (false);
+   455→
+   456→-- authenticated: নিজের row পড়া
+   457→CREATE POLICY "users_auth_read_own" ON "users"
+   458→  FOR SELECT USING (auth.uid() = "id");
+   459→
+   460→-- 🔑 FIX #3: Email update ব্লক করা হয়েছে
+   461→-- সিদ্ধান্ত: Email update allow করা হবে না। কারণ:
+   462→--   1. Supabase Auth তে email change করলে confirmation লাগে
+   463→--   2. public.users.email এবং auth.users.email sync রাখা জটিল
+   464→--   3. Email পরিবর্তনে identity theft risk
+   465→--   4. যদি email change দরকার হয়, Supabase Dashboard থেকে করুন
+   466→--
+   467→-- User শুধু এগুলো update করতে পারে: name, phone, address, avatar
+   468→-- User এগুলো update করতে পারবে না: id, email, role, banned, bannedUntil, createdAt
+   469→CREATE POLICY "users_auth_update_own" ON "users"
+   470→  FOR UPDATE USING (auth.uid() = "id")
+   471→  WITH CHECK (
+   472→    auth.uid() = "id"
+   473→    -- email পরিবর্তন ব্লক (custom auth — email change risk)
+   474→    AND "email" = (SELECT "email" FROM "users" WHERE "id" = auth.uid())
+   475→    -- role পরিবর্তন ব্লক (শুধু admin/service_role করতে পারে)
+   476→    AND "role" = (SELECT "role" FROM "users" WHERE "id" = auth.uid())
+   477→    -- banned status পরিবর্তন ব্লক (শুধু admin/service_role করতে পারে)
+   478→    AND "banned" = (SELECT "banned" FROM "users" WHERE "id" = auth.uid())
+   479→    -- bannedUntil পরিবর্তন ব্লক (শুধু admin/service_role করতে পারে)
+   480→    AND "bannedUntil" IS NOT DISTINCT FROM (SELECT "bannedUntil" FROM "users" WHERE "id" = auth.uid())
+   481→    -- id পরিবর্তন ব্লক
+   482→    AND "id" = auth.uid()
+   483→  );
+   484→
+   485→
+   486→-- ────────────────────────────────────────────────────────────
+   487→-- 4.5 POLICIES: categories
+   488→-- anon: শুধু active categories পড়া
+   489→-- authenticated: সব পড়া, admin লেখা
+   490→-- ────────────────────────────────────────────────────────────
+   491→
+   492→CREATE POLICY "categories_anon_read_active" ON "categories"
+   493→  FOR SELECT USING ("active" = true);
+   494→
+   495→CREATE POLICY "categories_auth_read_all" ON "categories"
+   496→  FOR SELECT USING ("is_admin"() OR auth.uid() IS NOT NULL);
+   497→
+   498→-- 🔑 FIX #4: Admin write শুধু service_role দিয়ে (is_admin RLS bypass risk)
+   499→-- categories, products, settings এ admin write শুধু backend থেকে হবে
+   500→-- service_role bypasses RLS, তাই এটা safe
+   501→-- তবে যদি authenticated client থেকে admin action করতে হয়,
+   502→-- is_admin() check দিয়ে restrict করা হচ্ছে
+   503→CREATE POLICY "categories_auth_admin_write" ON "categories"
+   504→  FOR ALL USING ("is_admin"()) WITH CHECK ("is_admin"());
+   505→
+   506→
+   507→-- ────────────────────────────────────────────────────────────
+   508→-- 4.6 POLICIES: products
+   509→-- anon: শুধু active products পড়া
+   510→-- authenticated: সব পড়া, admin লেখা
+   511→-- ────────────────────────────────────────────────────────────
+   512→
+   513→CREATE POLICY "products_anon_read_active" ON "products"
+   514→  FOR SELECT USING ("active" = true);
+   515→
+   516→CREATE POLICY "products_auth_read_all" ON "products"
+   517→  FOR SELECT USING ("is_admin"() OR auth.uid() IS NOT NULL);
+   518→
+   519→CREATE POLICY "products_auth_admin_write" ON "products"
+   520→  FOR ALL USING ("is_admin"()) WITH CHECK ("is_admin"());
+   521→
+   522→
+   523→-- ────────────────────────────────────────────────────────────
+   524→-- 4.7 POLICIES: cart
+   525→-- SENSITIVE: user এর cart items
+   526→-- anon: কোনো access নেই
+   527→-- authenticated: শুধু নিজের cart
+   528→-- ────────────────────────────────────────────────────────────
+   529→
+   530→CREATE POLICY "cart_anon_deny_all" ON "cart"
+   531→  FOR ALL USING (false) WITH CHECK (false);
+   532→
+   533→CREATE POLICY "cart_auth_read_own" ON "cart"
+   534→  FOR SELECT USING (auth.uid() = "userId");
+   535→
+   536→CREATE POLICY "cart_auth_insert_own" ON "cart"
+   537→  FOR INSERT WITH CHECK (auth.uid() = "userId");
+   538→
+   539→CREATE POLICY "cart_auth_update_own" ON "cart"
+   540→  FOR UPDATE USING (auth.uid() = "userId") WITH CHECK (auth.uid() = "userId");
+   541→
+   542→CREATE POLICY "cart_auth_delete_own" ON "cart"
+   543→  FOR DELETE USING (auth.uid() = "userId");
+   544→
+   545→
+   546→-- ────────────────────────────────────────────────────────────
+   547→-- 4.8 POLICIES: orders
+   548→-- 🔑 FIX #3: USING(true) বাদ → শুধু নিজের order + admin
+   549→--
+   550→-- নিয়ম:
+   551→--   ✅ User শুধু নিজের order দেখতে পারে
+   552→--   ✅ Admin সব order দেখতে পারে
+   553→--   ❌ anon কোনো order দেখতে পারে না
+   554→--
+   555→-- Realtime এর জন্য: authenticated role ব্যবহার করুন,
+   556→-- তাহলে auth.uid() দিয়ে filter হবে এবং নিজের order-ই
+   557→-- Realtime এ আসবে।
+   558→-- ────────────────────────────────────────────────────────────
+   559→
+   560→-- anon: কোনো access নেই
+   561→CREATE POLICY "orders_anon_deny_all" ON "orders"
+   562→  FOR ALL USING (false) WITH CHECK (false);
+   563→
+   564→-- authenticated: নিজের order পড়া + admin সব পড়া
+   565→CREATE POLICY "orders_auth_read_own" ON "orders"
+   566→  FOR SELECT USING (auth.uid() = "userId" OR "is_admin"());
+   567→
+   568→-- authenticated: নিজের order তৈরি
+   569→CREATE POLICY "orders_auth_insert_own" ON "orders"
+   570→  FOR INSERT WITH CHECK (auth.uid() = "userId");
+   571→
+   572→-- admin: order status update
+   573→CREATE POLICY "orders_auth_admin_update" ON "orders"
+   574→  FOR UPDATE USING ("is_admin"()) WITH CHECK ("is_admin"());
+   575→
+   576→
+   577→-- ────────────────────────────────────────────────────────────
+   578→-- 4.9 POLICIES: order_items
+   579→-- orders এর মতোই access pattern
+   580→-- 🔑 FIX #3 (cont): USING(true) বাদ
+   581→-- ────────────────────────────────────────────────────────────
+   582→
+   583→-- anon: কোনো access নেই
+   584→CREATE POLICY "order_items_anon_deny_all" ON "order_items"
+   585→  FOR ALL USING (false) WITH CHECK (false);
+   586→
+   587→-- authenticated: নিজের order এর items + admin সব
+   588→CREATE POLICY "order_items_auth_read_own" ON "order_items"
+   589→  FOR SELECT USING (
+   590→    EXISTS (SELECT 1 FROM "orders" WHERE "orders"."id" = "order_items"."orderId" AND "orders"."userId" = auth.uid())
+   591→    OR "is_admin"()
+   592→  );
+   593→
+   594→-- authenticated: নিজের order এ item insert
+   595→CREATE POLICY "order_items_auth_insert_own" ON "order_items"
+   596→  FOR INSERT WITH CHECK (
+   597→    EXISTS (SELECT 1 FROM "orders" WHERE "orders"."id" = "order_items"."orderId" AND "orders"."userId" = auth.uid())
+   598→  );
+   599→
+   600→
+   601→-- ────────────────────────────────────────────────────────────
+   602→-- 4.10 POLICIES: reviews
+   603→-- anon: সব reviews পড়া (public)
+   604→-- authenticated: review লেখা, নিজের আপডেট, admin ডিলিট
+   605→-- ────────────────────────────────────────────────────────────
+   606→
+   607→CREATE POLICY "reviews_anon_read" ON "reviews"
+   608→  FOR SELECT USING (true);
+   609→
+   610→CREATE POLICY "reviews_auth_insert" ON "reviews"
+   611→  FOR INSERT WITH CHECK (auth.uid() = "userId" AND "is_not_banned"());
+   612→
+   613→CREATE POLICY "reviews_auth_update_own" ON "reviews"
+   614→  FOR UPDATE USING (auth.uid() = "userId") WITH CHECK (auth.uid() = "userId");
+   615→
+   616→CREATE POLICY "reviews_auth_admin_delete" ON "reviews"
+   617→  FOR DELETE USING ("is_admin"());
+   618→
+   619→
+   620→-- ────────────────────────────────────────────────────────────
+   621→-- 4.11 POLICIES: user_logs
+   622→-- SENSITIVE: IP addresses, user agents
+   623→-- শুধু admin read পারে (service_role দিয়ে)
+   624→-- ────────────────────────────────────────────────────────────
+   625→
+   626→CREATE POLICY "user_logs_deny_all" ON "user_logs"
+   627→  FOR ALL USING (false) WITH CHECK (false);
+   628→
+   629→CREATE POLICY "user_logs_admin_read" ON "user_logs"
+   630→  FOR SELECT USING ("is_admin"());
+   631→
+   632→
+   633→-- ────────────────────────────────────────────────────────────
+   634→-- 4.12 POLICIES: admin_sessions
+   635→-- MOST SENSITIVE: Session tokens
+   636→-- শুধু API routes দিয়ে access (service_role bypasses RLS)
+   637→-- ────────────────────────────────────────────────────────────
+   638→
+   639→CREATE POLICY "admin_sessions_deny_all" ON "admin_sessions"
+   640→  FOR ALL USING (false) WITH CHECK (false);
+   641→
+   642→
+   643→-- ────────────────────────────────────────────────────────────
+   644→-- 4.13 POLICIES: chat_messages
+   645→-- 🔑 FIX #4: USING(true) বাদ → sender/receiver/admin only
+   646→--
+   647→-- নিয়ম:
+   648→--   ✅ Sender নিজের message দেখতে পারে
+   649→--   ✅ Receiver নিজের message দেখতে পারে
+   650→--   ✅ Admin সব message দেখতে পারে
+   651→--   ❌ অন্য কেউ দেখতে পারে না
+   652→--
+   653→-- receiverId এখন UUID (users.id FK), তাই auth.uid()
+   654→-- দিয়ে সরাসরি matching করা যায়
+   655→-- ────────────────────────────────────────────────────────────
+   656→
+   657→-- anon: কোনো access নেই
+   658→CREATE POLICY "chat_messages_anon_deny_all" ON "chat_messages"
+   659→  FOR ALL USING (false) WITH CHECK (false);
+   660→
+   661→-- authenticated: sender বা receiver হিসেবে নিজের message দেখা + admin সব
+   662→CREATE POLICY "chat_messages_auth_read_own" ON "chat_messages"
+   663→  FOR SELECT USING (
+   664→    auth.uid() = "senderId"
+   665→    OR auth.uid() = "receiverId"
+   666→    OR "is_admin"()
+   667→  );
+   668→
+   669→-- authenticated: message পাঠানো (banned user পারবে না)
+   670→CREATE POLICY "chat_messages_auth_insert" ON "chat_messages"
+   671→  FOR INSERT WITH CHECK (auth.uid() = "senderId" AND "is_not_banned"());
+   672→
+   673→-- 🔑 FIX #1: RLS recursion-free update policies
+   674→--
+   675→-- আগের সমস্যা: একই table (chat_messages) এ subquery করলে
+   676→-- RLS recursion / permission issue হতো।
+   677→--
+   678→-- সমাধান: RLS শুধু row-level access control করবে।
+   679→-- Column-level restriction (message edit vs read status)
+   680→-- API/backend validation এ handled হবে।
+   681→--
+   682→-- RLS নিয়ম (recursion-free):
+   683→--   ✅ Sender: নিজের message row update করতে পারে
+   684→--   ✅ Receiver: নিজের message row update করতে পারে
+   685→--   ✅ Admin: সব message update করতে পারে
+   686→--   ❌ Column-level guard → API routes এ enforce করুন:
+   687→--      - Sender শুধু message column edit করতে পারে (read নয়)
+   688→--      - Receiver শুধু read column edit করতে পারে (message নয়)
+   689→
+   690→-- Sender: নিজের message update (column restriction → API layer)
+   691→CREATE POLICY "chat_messages_auth_sender_update" ON "chat_messages"
+   692→  FOR UPDATE USING (auth.uid() = "senderId")
+   693→  WITH CHECK (auth.uid() = "senderId");
+   694→
+   695→-- Receiver: নিজের received message update (column restriction → API layer)
+   696→CREATE POLICY "chat_messages_auth_receiver_update_read" ON "chat_messages"
+   697→  FOR UPDATE USING (auth.uid() = "receiverId")
+   698→  WITH CHECK (auth.uid() = "receiverId");
+   699→
+   700→-- admin: সব message এ full access
+   701→CREATE POLICY "chat_messages_auth_admin_all" ON "chat_messages"
+   702→  FOR ALL USING ("is_admin"()) WITH CHECK ("is_admin"());
+   703→
+   704→
+   705→-- ────────────────────────────────────────────────────────────
+   706→-- 4.14 POLICIES: settings
+   707→-- anon: সব settings পড়া (banner, payment public)
+   708→-- admin: লেখা
+   709→-- ────────────────────────────────────────────────────────────
+   710→
+   711→CREATE POLICY "settings_anon_read" ON "settings"
+   712→  FOR SELECT USING (true);
+   713→
+   714→-- 🔑 FIX #4: Settings write শুধু admin (backend/service_role recommended)
+   715→CREATE POLICY "settings_auth_admin_write" ON "settings"
+   716→  FOR ALL USING ("is_admin"()) WITH CHECK ("is_admin"());
+   717→
+   718→
+   719→-- ╔══════════════════════════════════════════════════════════╗
+   720→-- ║  PHASE 5: SECURITY HARDENING                            ║
+   721→-- ║                                                          ║
+   722→-- ║  🔑 FIX #5: REVOKE ALL → safer alternative              ║
+   723→-- ║  Supabase-এ REVOKE ALL ON SCHEMA public FROM PUBLIC     ║
+   724→-- ║  করলে anon key দিয়ে কোনো table দেখা যায় না এবং       ║
+   725→-- ║  Supabase Dashboard/Studio-ও ভেঙে যেতে পারে।           ║
+   726→-- ║  তাই নির্দিষ্ট table-এ GRANT/REVOKE ব্যবহার করা হচ্ছে  ║
+   727→-- ╚══════════════════════════════════════════════════════════╝
+   728→
+   729→-- ────────────────────────────────────────────────────────────
+   730→-- 5.1 Safer schema-level permissions (Supabase compatible)
+   731→-- ⚠️  REVOKE ALL ON SCHEMA public FROM PUBLIC → এটা Supabase
+   732→--     Dashboard, Studio, এবং anon key access ভেঙে দেয়।
+   733→--     তাই schema level-এ GRANT রাখি, table level-এ নিয়ন্ত্রণ করি।
+   734→-- ────────────────────────────────────────────────────────────
+   735→
+   736→-- Schema usage সবার জন্য রাখুন (Supabase default)
+   737→GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+   738→
+   739→-- service_role: সব access (API routes এ ব্যবহৃত)
+   740→GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+   741→
+   742→-- anon: শুধু যে tables এ public read দরকার সেগুলো
+   743→-- (RLS policies আসল নিয়ন্ত্রণ করে, এটা শুধু baseline)
+   744→GRANT SELECT ON "categories"    TO anon;
+   745→GRANT SELECT ON "products"      TO anon;
+   746→GRANT SELECT ON "reviews"       TO anon;
+   747→GRANT SELECT ON "settings"      TO anon;
+   748→
+   749→-- authenticated: SELECT সব table-এ (RLS filter করবে)
+   750→GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
+   751→GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+   752→
+   753→-- Sequence permissions (gen_random_uuid)
+   754→GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+   755→
+   756→-- ────────────────────────────────────────────────────────────
+   757→-- 5.2 🔑 FIX #4: Admin action functions — শুধু service_role দিয়ে callable
+   758→--     Functions আগে তৈরি করুন, তারপর permissions সেট করুন
+   759→-- ────────────────────────────────────────────────────────────
+   760→
+   761→-- Admin role change (শুধু service_role ব্যবহার করে API route থেকে call করুন)
+   762→CREATE OR REPLACE FUNCTION "admin_set_user_role"(
+   763→  p_target_user_id UUID,
+   764→  p_new_role        "UserRole"
+   765→)
+   766→RETURNS VOID
+   767→LANGUAGE plpgsql
+   768→SECURITY DEFINER
+   769→SET search_path = public
+   770→AS $$
+   771→BEGIN
+   772→  IF NOT "is_admin"() THEN
+   773→    RAISE EXCEPTION 'Permission denied: admin only';
+   774→  END IF;
+   775→  UPDATE "users" SET "role" = p_new_role WHERE "id" = p_target_user_id;
+   776→END;
+   777→$$;
+   778→
+   779→-- Admin ban/unban (শুধু service_role ব্যবহার করে API route থেকে call করুন)
+   780→CREATE OR REPLACE FUNCTION "admin_set_user_banned"(
+   781→  p_target_user_id UUID,
+   782→  p_banned         BOOLEAN,
+   783→  p_banned_until   TIMESTAMPTZ DEFAULT NULL
+   784→)
+   785→RETURNS VOID
+   786→LANGUAGE plpgsql
+   787→SECURITY DEFINER
+   788→SET search_path = public
+   789→AS $$
+   790→BEGIN
+   791→  IF NOT "is_admin"() THEN
+   792→    RAISE EXCEPTION 'Permission denied: admin only';
+   793→  END IF;
+   794→  UPDATE "users" SET "banned" = p_banned, "bannedUntil" = p_banned_until
+   795→  WHERE "id" = p_target_user_id;
+   796→END;
+   797→$$;
+   798→
+   799→-- Admin settings update (শুধু service_role ব্যবহার করে API route থেকে call করুন)
+   800→CREATE OR REPLACE FUNCTION "admin_update_setting"(
+   801→  p_key   TEXT,
+   802→  p_value JSONB
+   803→)
+   804→RETURNS VOID
+   805→LANGUAGE plpgsql
+   806→SECURITY DEFINER
+   807→SET search_path = public
+   808→AS $$
+   809→BEGIN
+   810→  IF NOT "is_admin"() THEN
+   811→    RAISE EXCEPTION 'Permission denied: admin only';
+   812→  END IF;
+   813→  INSERT INTO "settings" ("key", "value")
+   814→  VALUES (p_key, p_value)
+   815→  ON CONFLICT ("key") DO UPDATE SET "value" = p_value;
+   816→END;
+   817→$$;
+   818→
+   819→-- Email sync: COMMENTED OUT — only needed with Supabase Auth
+   820→-- CREATE OR REPLACE FUNCTION "sync_user_email"()
+   821→-- RETURNS TRIGGER
+   822→-- LANGUAGE plpgsql
+   823→-- SECURITY DEFINER
+   824→-- SET search_path = public
+   825→-- AS $$
+   826→-- BEGIN
+   827→--   IF NEW.email IS DISTINCT FROM OLD.email THEN
+   828→--     UPDATE "users" SET "email" = NEW.email WHERE "id" = NEW.id;
+   829→--   END IF;
+   830→--   RETURN NEW;
+   831→-- END;
+   832→-- $$;
+   833→
+   834→-- ────────────────────────────────────────────────────────────
+   835→-- 5.3 Function permissions (সব function তৈরির পর)
+   836→-- ────────────────────────────────────────────────────────────
+   837→GRANT EXECUTE ON FUNCTION "is_admin"() TO anon, authenticated;
+   838→GRANT EXECUTE ON FUNCTION "is_not_banned"() TO anon, authenticated;
+   839→GRANT EXECUTE ON FUNCTION "update_updated_at_column"() TO anon, authenticated, service_role;
+   840→-- GRANT EXECUTE ON FUNCTION "public_handle_new_user"() TO anon, authenticated, service_role;
+   841→
+   842→-- Admin action functions — শুধু service_role execute করতে পারে
+   843→-- Client-side (anon/authenticated) থেকে direct call ব্লক
+   844→REVOKE ALL ON FUNCTION "admin_set_user_role"(UUID, "UserRole") FROM anon, authenticated;
+   845→GRANT EXECUTE ON FUNCTION "admin_set_user_role"(UUID, "UserRole") TO service_role;
+   846→
+   847→REVOKE ALL ON FUNCTION "admin_set_user_banned"(UUID, BOOLEAN, TIMESTAMPTZ) FROM anon, authenticated;
+   848→GRANT EXECUTE ON FUNCTION "admin_set_user_banned"(UUID, BOOLEAN, TIMESTAMPTZ) TO service_role;
+   849→
+   850→REVOKE ALL ON FUNCTION "admin_update_setting"(TEXT, JSONB) FROM anon, authenticated;
+   851→GRANT EXECUTE ON FUNCTION "admin_update_setting"(TEXT, JSONB) TO service_role;
+   852→
+   853→-- Email sync trigger function: COMMENTED OUT
+   854→-- REVOKE ALL ON FUNCTION "sync_user_email"() FROM anon, authenticated;
+   855→-- GRANT EXECUTE ON FUNCTION "sync_user_email"() TO service_role;
+   856→
+   857→-- ────────────────────────────────────────────────────────────
+   858→-- 5.4 Supabase Realtime সক্রিয় করা
+   859→-- ────────────────────────────────────────────────────────────
+   860→ALTER PUBLICATION supabase_realtime ADD TABLE "chat_messages";
+   861→ALTER PUBLICATION supabase_realtime ADD TABLE "orders";
+   862→
+   863→-- ────────────────────────────────────────────────────────────
+   864→-- 5.5 Idempotent triggers on auth.users
+   865→-- COMMENTED OUT — only needed with Supabase Auth
+   866→-- DROP TRIGGER IF EXISTS "on_auth_user_email_changed" ON auth.users;
+   867→-- CREATE TRIGGER "on_auth_user_email_changed"
+   868→--   AFTER UPDATE OF email ON auth.users
+   869→--   FOR EACH ROW
+   870→--   WHEN (OLD.email IS DISTINCT FROM NEW.email)
+   871→--   EXECUTE FUNCTION "sync_user_email"();
+   872→
+   873→-- ────────────────────────────────────────────────────────────
+   874→-- 5.6 Default admin user (custom bcrypt auth)
+   875→-- Password: admin123 (bcrypt hash)
+   876→-- ⚠️  প্রথম login এর পর পাসওয়ার্ড পরিবর্তন করুন!
+   877→-- ────────────────────────────────────────────────────────────
+   878→
+   879→INSERT INTO "users" ("id", "email", "name", "password", "role")
+   880→VALUES (
+   881→  gen_random_uuid(),
+   882→  'admin@banglabazar.com',
+   883→  'Admin',
+   884→  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+   885→  'admin'
+   886→) ON CONFLICT ("email") DO NOTHING;
+   887→
+   888→
+   889→-- ╔══════════════════════════════════════════════════════════╗
+   890→-- ║  PHASE 6: VERIFICATION (যাচাই করার জন্য)              ║
+   891→-- ║  নিচের queries রান করে সব ঠিক আছে কিনা দেখুন         ║
+   892→-- ╚══════════════════════════════════════════════════════════╝
+   893→
+   894→-- সব টেবিল আছে কিনা:
+   895→-- SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
+   896→
+   897→-- RLS সক্রিয় আছে কিনা:
+   898→-- SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
+   899→
+   900→-- সব policies দেখুন:
+   901→-- SELECT tablename, policyname, cmd FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename, policyname;
+   902→
+   903→-- users.id → check structure:
+   904→-- SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'users';
+   905→
+   906→-- Realtime টেবিল দেখুন:
+   907→-- SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
+   908→
+   909→-- Trigger আছে কিনা:
+   910→-- SELECT trigger_name, event_object_table FROM information_schema.triggers WHERE trigger_schema = 'public' ORDER BY event_object_table;
+   911→
+   912→
+   913→-- ╔══════════════════════════════════════════════════════════╗
+   914→-- ║  ✅ সম্পূর্ণ! পরবর্তী পদক্ষেপ:                          ║
+   915→-- ║                                                          ║
+   916→-- ║  1. Supabase Dashboard → Auth → Users → Admin তৈরি      ║
+   917→-- ║     Email: admin@banglabazar.com                         ║
+   918→-- ║     Password: (শক্তিশালী পাসওয়ার্ড দিন)                ║
+   919→-- ║  2. নিচের query রান করুন:                               ║
+   920→-- ║     UPDATE "users" SET "role" = 'admin'                  ║
+   921→-- ║     WHERE "email" = 'admin@banglabazar.com';             ║
+   922→-- ║  3. .env ফাইলে variables সেট করুন (README.md দেখুন)   ║
+   923→-- ║  4. npx prisma generate রান করুন                       ║
+   924→-- ║  5. npm run dev রান করুন                               ║
+   925→-- ╚══════════════════════════════════════════════════════════╝
+   926→

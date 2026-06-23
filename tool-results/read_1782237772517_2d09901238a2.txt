@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { Button } from '@/components/ui/button'
+     5→import { Input } from '@/components/ui/input'
+     6→import { Label } from '@/components/ui/label'
+     7→import {
+     8→  Dialog,
+     9→  DialogContent,
+    10→  DialogHeader,
+    11→  DialogTitle,
+    12→  DialogFooter,
+    13→  DialogDescription,
+    14→} from '@/components/ui/dialog'
+    15→import {
+    16→  Select,
+    17→  SelectContent,
+    18→  SelectItem,
+    19→  SelectTrigger,
+    20→  SelectValue,
+    21→} from '@/components/ui/select'
+    22→import { Switch } from '@/components/ui/switch'
+    23→import { Badge } from '@/components/ui/badge'
+    24→import {
+    25→  Table,
+    26→  TableBody,
+    27→  TableCell,
+    28→  TableHead,
+    29→  TableHeader,
+    30→  TableRow,
+    31→} from '@/components/ui/table'
+    32→import { Skeleton } from '@/components/ui/skeleton'
+    33→import { Textarea } from '@/components/ui/textarea'
+    34→
+    35→// ═══════════════════════════════════════════════════════════════
+    36→// Types
+    37→// ═══════════════════════════════════════════════════════════════
+    38→
+    39→interface AdminUser {
+    40→  id: string
+    41→  email: string
+    42→  name: string | null
+    43→  role: string
+    44→}
+    45→
+    46→interface AdminAuth {
+    47→  adminToken: string
+    48→  adminUser: AdminUser
+    49→}
+    50→
+    51→interface Category {
+    52→  id: string
+    53→  name: string
+    54→  nameBN: string | null
+    55→  slug: string
+    56→  icon: string | null
+    57→  active: boolean
+    58→  sortOrder: number
+    59→  _count?: { products: number }
+    60→}
+    61→
+    62→interface Product {
+    63→  id: string
+    64→  name: string
+    65→  nameBN: string | null
+    66→  description: string | null
+    67→  descriptionBN: string | null
+    68→  price: number
+    69→  salePrice: number | null
+    70→  category: string
+    71→  images: string
+    72→  stock: number
+    73→  featured: boolean
+    74→  active: boolean
+    75→  sku: string | null
+    76→  unit: string
+    77→  tags: string
+    78→  createdAt: string
+    79→  categoryRef?: { id: string; name: string; nameBN: string | null }
+    80→}
+    81→
+    82→interface Order {
+    83→  id: string
+    84→  userId: string
+    85→  total: number
+    86→  status: string
+    87→  address: string | null
+    88→  phone: string | null
+    89→  paymentMethod: string
+    90→  note: string | null
+    91→  createdAt: string
+    92→  user?: { id: string; name: string | null; email: string; phone: string | null }
+    93→  orderItems?: OrderItem[]
+    94→}
+    95→
+    96→interface OrderItem {
+    97→  id: string
+    98→  productId: string
+    99→  quantity: number
+   100→  price: number
+   101→  name: string
+   102→  image: string | null
+   103→}
+   104→
+   105→interface UserItem {
+   106→  id: string
+   107→  email: string
+   108→  name: string | null
+   109→  phone: string | null
+   110→  role: string
+   111→  avatar: string | null
+   112→  createdAt: string
+   113→  _count?: { orders: number }
+   114→}
+   115→
+   116→interface UserLogItem {
+   117→  id: string
+   118→  userId: string | null
+   119→  action: string
+   120→  details: string | null
+   121→  ip: string | null
+   122→  userAgent: string | null
+   123→  createdAt: string
+   124→  user?: { id: string; name: string | null; email: string } | null
+   125→}
+   126→
+   127→interface DashboardStats {
+   128→  totalProducts: number
+   129→  totalOrders: number
+   130→  totalUsers: number
+   131→  totalRevenue: number
+   132→}
+   133→
+   134→type AdminView = 'dashboard' | 'products' | 'categories' | 'orders' | 'users' | 'user-logs'
+   135→
+   136→// ═══════════════════════════════════════════════════════════════
+   137→// API Helper
+   138→// ═══════════════════════════════════════════════════════════════
+   139→
+   140→async function adminFetch(url: string, token: string, options?: RequestInit) {
+   141→  const res = await fetch(url, {
+   142→    ...options,
+   143→    headers: {
+   144→      'Authorization': `Bearer ${token}`,
+   145→      'Content-Type': 'application/json',
+   146→      ...options?.headers,
+   147→    },
+   148→  })
+   149→  if (res.status === 401) {
+   150→    throw new Error('UNAUTHORIZED')
+   151→  }
+   152→  return res
+   153→}
+   154→
+   155→// ═══════════════════════════════════════════════════════════════
+   156→// SVG Icons (inline, no emoji)
+   157→// ═══════════════════════════════════════════════════════════════
+   158→
+   159→function HomeIcon({ className = 'w-5 h-5' }: { className?: string }) {
+   160→  return (
+   161→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   162→      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+   163→      <polyline points="9 22 9 12 15 12 15 22" />
+   164→    </svg>
+   165→  )
+   166→}
+   167→
+   168→function BoxIcon({ className = 'w-5 h-5' }: { className?: string }) {
+   169→  return (
+   170→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   171→      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+   172→      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+   173→      <line x1="12" y1="22.08" x2="12" y2="12" />
+   174→    </svg>
+   175→  )
+   176→}
+   177→
+   178→function GridIcon({ className = 'w-5 h-5' }: { className?: string }) {
+   179→  return (
+   180→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   181→      <rect x="3" y="3" width="7" height="7" />
+   182→      <rect x="14" y="3" width="7" height="7" />
+   183→      <rect x="14" y="14" width="7" height="7" />
+   184→      <rect x="3" y="14" width="7" height="7" />
+   185→    </svg>
+   186→  )
+   187→}
+   188→
+   189→function ShoppingBagIcon({ className = 'w-5 h-5' }: { className?: string }) {
+   190→  return (
+   191→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   192→      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+   193→      <line x1="3" y1="6" x2="21" y2="6" />
+   194→      <path d="M16 10a4 4 0 0 1-8 0" />
+   195→    </svg>
+   196→  )
+   197→}
+   198→
+   199→function UsersIcon({ className = 'w-5 h-5' }: { className?: string }) {
+   200→  return (
+   201→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   202→      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+   203→      <circle cx="9" cy="7" r="4" />
+   204→      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+   205→      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+   206→    </svg>
+   207→  )
+   208→}
+   209→
+   210→function FileTextIcon({ className = 'w-5 h-5' }: { className?: string }) {
+   211→  return (
+   212→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   213→      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+   214→      <polyline points="14 2 14 8 20 8" />
+   215→      <line x1="16" y1="13" x2="8" y2="13" />
+   216→      <line x1="16" y1="17" x2="8" y2="17" />
+   217→      <polyline points="10 9 9 9 8 9" />
+   218→    </svg>
+   219→  )
+   220→}
+   221→
+   222→function LogOutIcon({ className = 'w-5 h-5' }: { className?: string }) {
+   223→  return (
+   224→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   225→      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+   226→      <polyline points="16 17 21 12 16 7" />
+   227→      <line x1="21" y1="12" x2="9" y2="12" />
+   228→    </svg>
+   229→  )
+   230→}
+   231→
+   232→function MenuIcon({ className = 'w-6 h-6' }: { className?: string }) {
+   233→  return (
+   234→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   235→      <line x1="3" y1="12" x2="21" y2="12" />
+   236→      <line x1="3" y1="6" x2="21" y2="6" />
+   237→      <line x1="3" y1="18" x2="21" y2="18" />
+   238→    </svg>
+   239→  )
+   240→}
+   241→
+   242→function XIcon({ className = 'w-5 h-5' }: { className?: string }) {
+   243→  return (
+   244→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   245→      <line x1="18" y1="6" x2="6" y2="18" />
+   246→      <line x1="6" y1="6" x2="18" y2="18" />
+   247→    </svg>
+   248→  )
+   249→}
+   250→
+   251→function PlusIcon({ className = 'w-4 h-4' }: { className?: string }) {
+   252→  return (
+   253→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   254→      <line x1="12" y1="5" x2="12" y2="19" />
+   255→      <line x1="5" y1="12" x2="19" y2="12" />
+   256→    </svg>
+   257→  )
+   258→}
+   259→
+   260→function PencilIcon({ className = 'w-4 h-4' }: { className?: string }) {
+   261→  return (
+   262→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   263→      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+   264→      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+   265→    </svg>
+   266→  )
+   267→}
+   268→
+   269→function TrashIcon({ className = 'w-4 h-4' }: { className?: string }) {
+   270→  return (
+   271→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   272→      <polyline points="3 6 5 6 21 6" />
+   273→      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+   274→    </svg>
+   275→  )
+   276→}
+   277→
+   278→function EyeIcon({ className = 'w-4 h-4' }: { className?: string }) {
+   279→  return (
+   280→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   281→      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+   282→      <circle cx="12" cy="12" r="3" />
+   283→    </svg>
+   284→  )
+   285→}
+   286→
+   287→function ChevronLeftIcon({ className = 'w-4 h-4' }: { className?: string }) {
+   288→  return (
+   289→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   290→      <polyline points="15 18 9 12 15 6" />
+   291→    </svg>
+   292→  )
+   293→}
+   294→
+   295→function ChevronRightIcon({ className = 'w-4 h-4' }: { className?: string }) {
+   296→  return (
+   297→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   298→      <polyline points="9 18 15 12 9 6" />
+   299→    </svg>
+   300→  )
+   301→}
+   302→
+   303→function SearchIcon({ className = 'w-4 h-4' }: { className?: string }) {
+   304→  return (
+   305→    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   306→      <circle cx="11" cy="11" r="8" />
+   307→      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+   308→    </svg>
+   309→  )
+   310→}
+   311→
+   312→// ═══════════════════════════════════════════════════════════════
+   313→// Helper functions
+   314→// ═══════════════════════════════════════════════════════════════
+   315→
+   316→function formatTaka(amount: number): string {
+   317→  return `৳${amount.toLocaleString('en-BD', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+   318→}
+   319→
+   320→function formatDate(dateStr: string): string {
+   321→  try {
+   322→    return new Date(dateStr).toLocaleDateString('en-GB', {
+   323→      day: '2-digit',
+   324→      month: 'short',
+   325→      year: 'numeric',
+   326→      hour: '2-digit',
+   327→      minute: '2-digit',
+   328→    })
+   329→  } catch {
+   330→    return dateStr
+   331→  }
+   332→}
+   333→
+   334→function getStatusColor(status: string): string {
+   335→  switch (status) {
+   336→    case 'pending': return 'bg-yellow-900/40 text-yellow-300 border-yellow-700'
+   337→    case 'confirmed': return 'bg-blue-900/40 text-blue-300 border-blue-700'
+   338→    case 'processing': return 'bg-blue-900/40 text-blue-300 border-blue-700'
+   339→    case 'shipped': return 'bg-purple-900/40 text-purple-300 border-purple-700'
+   340→    case 'delivered': return 'bg-green-900/40 text-green-300 border-green-700'
+   341→    case 'cancelled': return 'bg-red-900/40 text-red-300 border-red-700'
+   342→    default: return 'bg-gray-800 text-gray-300 border-gray-600'
+   343→  }
+   344→}
+   345→
+   346→function generateSlug(name: string): string {
+   347→  return name
+   348→    .toLowerCase()
+   349→    .replace(/[^a-z0-9\s-]/g, '')
+   350→    .replace(/\s+/g, '-')
+   351→    .replace(/-+/g, '-')
+   352→    .replace(/^-|-$/g, '')
+   353→}
+   354→
+   355→function sanitize(str: string): string {
+   356→  return str.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+   357→}
+   358→
+   359→// ═══════════════════════════════════════════════════════════════
+   360→// Admin Login Component
+   361→// ═══════════════════════════════════════════════════════════════
+   362→
+   363→function AdminLogin({ onLogin }: { onLogin: (auth: AdminAuth) => void }) {
+   364→  const [email, setEmail] = useState('')
+   365→  const [password, setPassword] = useState('')
+   366→  const [loading, setLoading] = useState(false)
+   367→  const [error, setError] = useState('')
+   368→
+   369→  const handleSubmit = async (e: React.FormEvent) => {
+   370→    e.preventDefault()
+   371→    setError('')
+   372→    setLoading(true)
+   373→
+   374→    try {
+   375→      const res = await fetch('/api/admin', {
+   376→        method: 'POST',
+   377→        headers: { 'Content-Type': 'application/json' },
+   378→        body: JSON.stringify({ email: email.trim(), password }),
+   379→      })
+   380→
+   381→      const data = await res.json()
+   382→
+   383→      if (!res.ok) {
+   384→        setError(data.error || 'Login failed')
+   385→        return
+   386→      }
+   387→
+   388→      const auth: AdminAuth = {
+   389→        adminToken: data.token,
+   390→        adminUser: data.user,
+   391→      }
+   392→      localStorage.setItem('bdk-admin', JSON.stringify(auth))
+   393→      onLogin(auth)
+   394→    } catch {
+   395→      setError('Network error. Please try again.')
+   396→    } finally {
+   397→      setLoading(false)
+   398→    }
+   399→  }
+   400→
+   401→  return (
+   402→    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] p-4">
+   403→      <div className="w-full max-w-md">
+   404→        <div className="bg-[#1A1A1A] rounded-2xl shadow-lg p-8 border border-[#2A2A2A]">
+   405→          <div className="text-center mb-8">
+   406→            <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: '#FFD700' }}>
+   407→              <span className="text-[#0A0A0A] text-2xl font-bold">BB</span>
+   408→            </div>
+   409→            <h1 className="text-2xl font-bold text-white">Bangla Bazar Admin</h1>
+   410→            <p className="text-gray-400 mt-1 text-sm">Sign in to your admin account</p>
+   411→          </div>
+   412→
+   413→          <form onSubmit={handleSubmit} className="space-y-4">
+   414→            <div className="space-y-2">
+   415→              <Label htmlFor="admin-email" className="text-white">Email</Label>
+   416→              <Input
+   417→                id="admin-email"
+   418→                type="email"
+   419→                placeholder="admin@banglabazar.com"
+   420→                value={email}
+   421→                onChange={(e) => setEmail(e.target.value)}
+   422→                required
+   423→                disabled={loading}
+   424→                className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500"
+   425→              />
+   426→            </div>
+   427→
+   428→            <div className="space-y-2">
+   429→              <Label htmlFor="admin-password" className="text-white">Password</Label>
+   430→              <Input
+   431→                id="admin-password"
+   432→                type="password"
+   433→                placeholder="Enter password"
+   434→                value={password}
+   435→                onChange={(e) => setPassword(e.target.value)}
+   436→                required
+   437→                disabled={loading}
+   438→                minLength={6}
+   439→                className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500"
+   440→              />
+   441→            </div>
+   442→
+   443→            {error && (
+   444→              <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
+   445→                {error}
+   446→              </div>
+   447→            )}
+   448→
+   449→            <Button
+   450→              type="submit"
+   451→              className="w-full font-medium"
+   452→              style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}
+   453→              disabled={loading}
+   454→            >
+   455→              {loading ? 'Signing in...' : 'Sign In'}
+   456→            </Button>
+   457→          </form>
+   458→        </div>
+   459→
+   460→        <p className="text-center text-gray-500 text-xs mt-4">
+   461→          Admin access only. Unauthorized access is prohibited.
+   462→        </p>
+   463→      </div>
+   464→    </div>
+   465→  )
+   466→}
+   467→
+   468→// ═══════════════════════════════════════════════════════════════
+   469→// Dashboard View
+   470→// ═══════════════════════════════════════════════════════════════
+   471→
+   472→function DashboardView({ token }: { token: string }) {
+   473→  const [stats, setStats] = useState<DashboardStats | null>(null)
+   474→  const [recentOrders, setRecentOrders] = useState<Order[]>([])
+   475→  const [loading, setLoading] = useState(true)
+   476→
+   477→  useEffect(() => {
+   478→    async function fetchDashboard() {
+   479→      try {
+   480→        const res = await adminFetch('/api/admin', token)
+   481→        const data = await res.json()
+   482→        setStats(data.stats)
+   483→        setRecentOrders(data.recentOrders || [])
+   484→      } catch {
+   485→        // handled by parent
+   486→      } finally {
+   487→        setLoading(false)
+   488→      }
+   489→    }
+   490→    fetchDashboard()
+   491→  }, [token])
+   492→
+   493→  if (loading) {
+   494→    return (
+   495→      <div className="space-y-6">
+   496→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+   497→          {[1, 2, 3, 4].map((i) => (
+   498→            <Skeleton key={i} className="h-32 rounded-xl bg-[#1A1A1A]" />
+   499→          ))}
+   500→        </div>
+   501→        <Skeleton className="h-64 rounded-xl bg-[#1A1A1A]" />
+   502→      </div>
+   503→    )
+   504→  }
+   505→
+   506→  const statCards = [
+   507→    { label: 'Total Products', value: stats?.totalProducts ?? 0, icon: <BoxIcon className="w-6 h-6" />, color: '#FFD700' },
+   508→    { label: 'Total Orders', value: stats?.totalOrders ?? 0, icon: <ShoppingBagIcon className="w-6 h-6" />, color: '#FFD700' },
+   509→    { label: 'Total Users', value: stats?.totalUsers ?? 0, icon: <UsersIcon className="w-6 h-6" />, color: '#FFD700' },
+   510→    { label: 'Total Revenue', value: formatTaka(stats?.totalRevenue ?? 0), icon: <ShoppingBagIcon className="w-6 h-6" />, color: '#FFD700' },
+   511→  ]
+   512→
+   513→  return (
+   514→    <div className="space-y-6">
+   515→      <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+   516→
+   517→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+   518→        {statCards.map((card) => (
+   519→          <div key={card.label} className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] p-6">
+   520→            <div className="flex items-center justify-between">
+   521→              <div>
+   522→                <p className="text-sm text-gray-400 font-medium">{card.label}</p>
+   523→                <p className="text-2xl font-bold text-white mt-1">{card.value}</p>
+   524→              </div>
+   525→              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: card.color + '20', color: card.color }}>
+   526→                {card.icon}
+   527→              </div>
+   528→            </div>
+   529→          </div>
+   530→        ))}
+   531→      </div>
+   532→
+   533→      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]">
+   534→        <div className="p-6 border-b border-[#2A2A2A]">
+   535→          <h3 className="text-lg font-semibold text-white">Recent Orders</h3>
+   536→        </div>
+   537→        <Table>
+   538→          <TableHeader>
+   539→            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
+   540→              <TableHead className="text-gray-400">Order ID</TableHead>
+   541→              <TableHead className="text-gray-400">Customer</TableHead>
+   542→              <TableHead className="text-gray-400">Items</TableHead>
+   543→              <TableHead className="text-gray-400">Total</TableHead>
+   544→              <TableHead className="text-gray-400">Status</TableHead>
+   545→              <TableHead className="text-gray-400">Date</TableHead>
+   546→            </TableRow>
+   547→          </TableHeader>
+   548→          <TableBody>
+   549→            {recentOrders.length === 0 ? (
+   550→              <TableRow>
+   551→                <TableCell colSpan={6} className="text-center text-gray-500 py-8">No orders yet</TableCell>
+   552→              </TableRow>
+   553→            ) : (
+   554→              recentOrders.map((order) => (
+   555→                <TableRow key={order.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+   556→                  <TableCell className="font-mono text-xs text-white">{order.id.slice(-8)}</TableCell>
+   557→                  <TableCell className="text-white">{order.user?.name || order.user?.email || 'N/A'}</TableCell>
+   558→                  <TableCell className="text-gray-300">{order.orderItems?.length ?? 0}</TableCell>
+   559→                  <TableCell className="font-medium text-white">{formatTaka(order.total)}</TableCell>
+   560→                  <TableCell>
+   561→                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
+   562→                      {order.status}
+   563→                    </span>
+   564→                  </TableCell>
+   565→                  <TableCell className="text-xs text-gray-500">{formatDate(order.createdAt)}</TableCell>
+   566→                </TableRow>
+   567→              ))
+   568→            )}
+   569→          </TableBody>
+   570→        </Table>
+   571→      </div>
+   572→    </div>
+   573→  )
+   574→}
+   575→
+   576→// ═══════════════════════════════════════════════════════════════
+   577→// Products View
+   578→// ═══════════════════════════════════════════════════════════════
+   579→
+   580→function ProductsView({ token }: { token: string }) {
+   581→  const [products, setProducts] = useState<Product[]>([])
+   582→  const [categories, setCategories] = useState<Category[]>([])
+   583→  const [loading, setLoading] = useState(true)
+   584→  const [page, setPage] = useState(1)
+   585→  const [totalPages, setTotalPages] = useState(1)
+   586→  const [showModal, setShowModal] = useState(false)
+   587→  const [editProduct, setEditProduct] = useState<Product | null>(null)
+   588→  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+   589→  const [saving, setSaving] = useState(false)
+   590→  const [formError, setFormError] = useState('')
+   591→  const [uploading, setUploading] = useState(false)
+   592→
+   593→  // Form state
+   594→  const [formName, setFormName] = useState('')
+   595→  const [formNameBN, setFormNameBN] = useState('')
+   596→  const [formImages, setFormImages] = useState('[]')
+   597→  const [formDesc, setFormDesc] = useState('')
+   598→  const [formDescBN, setFormDescBN] = useState('')
+   599→  const [formPrice, setFormPrice] = useState('')
+   600→  const [formSalePrice, setFormSalePrice] = useState('')
+   601→  const [formCategory, setFormCategory] = useState('')
+   602→  const [formStock, setFormStock] = useState('0')
+   603→  const [formSku, setFormSku] = useState('')
+   604→  const [formUnit, setFormUnit] = useState('piece')
+   605→  const [formFeatured, setFormFeatured] = useState(false)
+   606→  const [formActive, setFormActive] = useState(true)
+   607→  const [formTags, setFormTags] = useState('')
+   608→
+   609→  const fetchProducts = useCallback(async () => {
+   610→    try {
+   611→      const res = await adminFetch(`/api/admin/products?page=${page}&limit=10`, token)
+   612→      const data = await res.json()
+   613→      setProducts(data.products || [])
+   614→      setTotalPages(data.totalPages || 1)
+   615→    } catch {
+   616→      // handled by parent
+   617→    } finally {
+   618→      setLoading(false)
+   619→    }
+   620→  }, [token, page])
+   621→
+   622→  const fetchCategories = useCallback(async () => {
+   623→    try {
+   624→      const res = await adminFetch('/api/categories', token)
+   625→      const data = await res.json()
+   626→      setCategories(data.categories || [])
+   627→    } catch {
+   628→      // silent
+   629→    }
+   630→  }, [token])
+   631→
+   632→  useEffect(() => {
+   633→    fetchProducts()
+   634→  }, [fetchProducts])
+   635→
+   636→  useEffect(() => {
+   637→    fetchCategories()
+   638→  }, [fetchCategories])
+   639→
+   640→  const resetForm = () => {
+   641→    setFormName('')
+   642→    setFormNameBN('')
+   643→    setFormImages('[]')
+   644→    setFormDesc('')
+   645→    setFormDescBN('')
+   646→    setFormPrice('')
+   647→    setFormSalePrice('')
+   648→    setFormCategory('')
+   649→    setFormStock('0')
+   650→    setFormSku('')
+   651→    setFormUnit('piece')
+   652→    setFormFeatured(false)
+   653→    setFormActive(true)
+   654→    setFormTags('')
+   655→    setFormError('')
+   656→    setEditProduct(null)
+   657→  }
+   658→
+   659→  const openAddModal = () => {
+   660→    resetForm()
+   661→    setShowModal(true)
+   662→  }
+   663→
+   664→  const openEditModal = (product: Product) => {
+   665→    setEditProduct(product)
+   666→    setFormName(product.name)
+   667→    setFormNameBN(product.nameBN || '')
+   668→    setFormImages(product.images || '[]')
+   669→    setFormDesc(product.description || '')
+   670→    setFormDescBN(product.descriptionBN || '')
+   671→    setFormPrice(product.price.toString())
+   672→    setFormSalePrice(product.salePrice?.toString() || '')
+   673→    setFormCategory(product.category)
+   674→    setFormStock(product.stock.toString())
+   675→    setFormSku(product.sku || '')
+   676→    setFormUnit(product.unit)
+   677→    setFormFeatured(product.featured)
+   678→    setFormActive(product.active)
+   679→    try {
+   680→      const tagsArr = JSON.parse(product.tags || '[]')
+   681→      setFormTags(Array.isArray(tagsArr) ? tagsArr.join(', ') : '')
+   682→    } catch {
+   683→      setFormTags('')
+   684→    }
+   685→    setFormError('')
+   686→    setShowModal(true)
+   687→  }
+   688→
+   689→  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   690→    const file = e.target.files?.[0]
+   691→    if (!file) return
+   692→
+   693→    setUploading(true)
+   694→    try {
+   695→      const formData = new FormData()
+   696→      formData.append('file', file)
+   697→
+   698→      const adminData = JSON.parse(localStorage.getItem('bdk-admin') || '{}')
+   699→      const res = await fetch('/api/upload', {
+   700→        method: 'POST',
+   701→        headers: { 'Authorization': `Bearer ${adminData.adminToken}` },
+   702→        body: formData,
+   703→      })
+   704→
+   705→      if (!res.ok) throw new Error('Upload failed')
+   706→      const data = await res.json()
+   707→
+   708→      const currentImages = JSON.parse(formImages || '[]')
+   709→      const newImages = [...currentImages, data.url]
+   710→      setFormImages(JSON.stringify(newImages))
+   711→    } catch (err) {
+   712→      console.error('Upload error:', err)
+   713→    } finally {
+   714→      setUploading(false)
+   715→    }
+   716→  }
+   717→
+   718→  const removeImage = async (index: number) => {
+   719→    const currentImages: string[] = JSON.parse(formImages || '[]')
+   720→    const imageUrl = currentImages[index]
+   721→
+   722→    // Try to delete from R2 if it's an R2 URL
+   723→    if (imageUrl && (imageUrl.includes('r2.dev') || imageUrl.includes('r2.cloudflarestorage') || imageUrl.includes('img.banglabazar'))) {
+   724→      try {
+   725→        const adminData = JSON.parse(localStorage.getItem('bdk-admin') || '{}')
+   726→        await fetch('/api/upload', {
+   727→          method: 'DELETE',
+   728→          headers: {
+   729→            'Content-Type': 'application/json',
+   730→            'Authorization': `Bearer ${adminData.adminToken}`,
+   731→          },
+   732→          body: JSON.stringify({ url: imageUrl }),
+   733→        })
+   734→      } catch {
+   735→        // Silently fail — image removed from list even if R2 delete fails
+   736→      }
+   737→    }
+   738→
+   739→    const newImages = currentImages.filter((_: string, i: number) => i !== index)
+   740→    setFormImages(JSON.stringify(newImages))
+   741→  }
+   742→
+   743→  const handleSave = async () => {
+   744→    setFormError('')
+   745→    setSaving(true)
+   746→
+   747→    try {
+   748→      const body = {
+   749→        name: sanitize(formName.trim()),
+   750→        nameBN: formNameBN.trim() ? sanitize(formNameBN.trim()) : undefined,
+   751→        images: formImages || '[]',
+   752→        description: formDesc.trim() ? sanitize(formDesc.trim()) : undefined,
+   753→        descriptionBN: formDescBN.trim() ? sanitize(formDescBN.trim()) : undefined,
+   754→        price: parseFloat(formPrice),
+   755→        salePrice: formSalePrice ? parseFloat(formSalePrice) : null,
+   756→        category: formCategory,
+   757→        stock: parseInt(formStock) || 0,
+   758→        sku: formSku.trim() ? sanitize(formSku.trim()) : undefined,
+   759→        unit: formUnit,
+   760→        featured: formFeatured,
+   761→        active: formActive,
+   762→        tags: formTags.trim() ? JSON.stringify(formTags.split(',').map(t => t.trim()).filter(Boolean)) : '[]',
+   763→      }
+   764→
+   765→      if (!body.name || !body.price || !body.category) {
+   766→        setFormError('Name, price, and category are required')
+   767→        setSaving(false)
+   768→        return
+   769→      }
+   770→
+   771→      let res: Response
+   772→      if (editProduct) {
+   773→        res = await adminFetch(`/api/products/${editProduct.id}`, token, {
+   774→          method: 'PUT',
+   775→          body: JSON.stringify(body),
+   776→        })
+   777→      } else {
+   778→        res = await adminFetch('/api/products', token, {
+   779→          method: 'POST',
+   780→          body: JSON.stringify(body),
+   781→        })
+   782→      }
+   783→
+   784→      const data = await res.json()
+   785→      if (!res.ok) {
+   786→        setFormError(data.error || 'Failed to save product')
+   787→        setSaving(false)
+   788→        return
+   789→      }
+   790→
+   791→      setShowModal(false)
+   792→      resetForm()
+   793→      fetchProducts()
+   794→    } catch {
+   795→      setFormError('Network error. Please try again.')
+   796→    } finally {
+   797→      setSaving(false)
+   798→    }
+   799→  }
+   800→
+   801→  const handleDelete = async (id: string) => {
+   802→    try {
+   803→      const res = await adminFetch(`/api/products/${id}`, token, { method: 'DELETE' })
+   804→      if (res.ok) {
+   805→        setDeleteConfirm(null)
+   806→        fetchProducts()
+   807→      }
+   808→    } catch {
+   809→      // handled
+   810→    }
+   811→  }
+   812→
+   813→  if (loading) {
+   814→    return (
+   815→      <div className="space-y-4">
+   816→        <Skeleton className="h-10 w-40 bg-[#1A1A1A]" />
+   817→        {[1, 2, 3, 4, 5].map((i) => (
+   818→          <Skeleton key={i} className="h-16 rounded-lg bg-[#1A1A1A]" />
+   819→        ))}
+   820→      </div>
+   821→    )
+   822→  }
+   823→
+   824→  return (
+   825→    <div className="space-y-6">
+   826→      <div className="flex items-center justify-between">
+   827→        <h2 className="text-2xl font-bold text-white">Products</h2>
+   828→        <Button onClick={openAddModal} style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+   829→          <PlusIcon className="w-4 h-4 mr-2" /> Add Product
+   830→        </Button>
+   831→      </div>
+   832→
+   833→      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+   834→        <Table>
+   835→          <TableHeader>
+   836→            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
+   837→              <TableHead className="text-gray-400">Image</TableHead>
+   838→              <TableHead className="text-gray-400">Name</TableHead>
+   839→              <TableHead className="text-gray-400">Category</TableHead>
+   840→              <TableHead className="text-gray-400">Price</TableHead>
+   841→              <TableHead className="text-gray-400">Stock</TableHead>
+   842→              <TableHead className="text-gray-400">Status</TableHead>
+   843→              <TableHead className="text-gray-400">Actions</TableHead>
+   844→            </TableRow>
+   845→          </TableHeader>
+   846→          <TableBody>
+   847→            {products.length === 0 ? (
+   848→              <TableRow>
+   849→                <TableCell colSpan={7} className="text-center text-gray-500 py-8">No products found</TableCell>
+   850→              </TableRow>
+   851→            ) : (
+   852→              products.map((product) => {
+   853→                let imgSrc = ''
+   854→                try {
+   855→                  const imgs = JSON.parse(product.images)
+   856→                  imgSrc = imgs[0] || ''
+   857→                } catch {
+   858→                  imgSrc = ''
+   859→                }
+   860→                return (
+   861→                  <TableRow key={product.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+   862→                    <TableCell>
+   863→                      <div className="w-10 h-10 rounded-lg bg-[#0A0A0A] flex items-center justify-center overflow-hidden">
+   864→                        {imgSrc ? (
+   865→                          <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
+   866→                        ) : (
+   867→                          <BoxIcon className="w-5 h-5 text-gray-600" />
+   868→                        )}
+   869→                      </div>
+   870→                    </TableCell>
+   871→                    <TableCell>
+   872→                      <div>
+   873→                        <p className="font-medium text-white">{product.name}</p>
+   874→                        {product.nameBN && <p className="text-xs text-gray-500">{product.nameBN}</p>}
+   875→                      </div>
+   876→                    </TableCell>
+   877→                    <TableCell className="text-gray-300">{product.categoryRef?.name || 'N/A'}</TableCell>
+   878→                    <TableCell>
+   879→                      <div>
+   880→                        <span className="font-medium text-white">{formatTaka(product.salePrice ?? product.price)}</span>
+   881→                        {product.salePrice && (
+   882→                          <span className="text-xs text-gray-500 line-through ml-1">{formatTaka(product.price)}</span>
+   883→                        )}
+   884→                      </div>
+   885→                    </TableCell>
+   886→                    <TableCell>
+   887→                      <span className={product.stock <= 5 ? 'text-red-400 font-medium' : 'text-gray-300'}>
+   888→                        {product.stock}
+   889→                      </span>
+   890→                    </TableCell>
+   891→                    <TableCell>
+   892→                      <div className="flex gap-1">
+   893→                        {product.active ? (
+   894→                          <Badge variant="outline" className="bg-[#FFD700]/10 text-[#FFD700] border-[#FFD700]/30">Active</Badge>
+   895→                        ) : (
+   896→                          <Badge variant="outline" className="bg-gray-800 text-gray-400 border-gray-600">Inactive</Badge>
+   897→                        )}
+   898→                        {product.featured && (
+   899→                          <Badge variant="outline" className="bg-yellow-900/30 text-yellow-300 border-yellow-700">Featured</Badge>
+   900→                        )}
+   901→                      </div>
+   902→                    </TableCell>
+   903→                    <TableCell>
+   904→                      <div className="flex items-center gap-1">
+   905→                        <Button variant="ghost" size="sm" onClick={() => openEditModal(product)} title="Edit">
+   906→                          <PencilIcon className="w-4 h-4 text-[#FFD700]" />
+   907→                        </Button>
+   908→                        <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(product.id)} title="Delete">
+   909→                          <TrashIcon className="w-4 h-4 text-red-500" />
+   910→                        </Button>
+   911→                      </div>
+   912→                    </TableCell>
+   913→                  </TableRow>
+   914→                )
+   915→              })
+   916→            )}
+   917→          </TableBody>
+   918→        </Table>
+   919→
+   920→        {/* Pagination */}
+   921→        {totalPages > 1 && (
+   922→          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A2A2A]">
+   923→            <p className="text-sm text-gray-400">Page {page} of {totalPages}</p>
+   924→            <div className="flex gap-2">
+   925→              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+   926→                <ChevronLeftIcon className="w-4 h-4" />
+   927→              </Button>
+   928→              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+   929→                <ChevronRightIcon className="w-4 h-4" />
+   930→              </Button>
+   931→            </div>
+   932→          </div>
+   933→        )}
+   934→      </div>
+   935→
+   936→      {/* Add/Edit Product Modal */}
+   937→      <Dialog open={showModal} onOpenChange={(open) => { if (!open) { setShowModal(false); resetForm() } }}>
+   938→        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-[#1A1A1A] border-[#2A2A2A]">
+   939→          <DialogHeader>
+   940→            <DialogTitle className="text-white">{editProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
+   941→            <DialogDescription className="text-gray-400">
+   942→              {editProduct ? 'Update product details below.' : 'Fill in the details to create a new product.'}
+   943→            </DialogDescription>
+   944→          </DialogHeader>
+   945→
+   946→          {formError && (
+   947→            <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2 rounded-lg text-sm">{formError}</div>
+   948→          )}
+   949→
+   950→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   951→            <div className="space-y-2">
+   952→              <Label className="text-white">Name *</Label>
+   953→              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Product name" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+   954→            </div>
+   955→            <div className="space-y-2">
+   956→              <Label className="text-white">Name (Bengali)</Label>
+   957→              <Input value={formNameBN} onChange={(e) => setFormNameBN(e.target.value)} placeholder="বাংলায় নাম" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+   958→            </div>
+   959→
+   960→            {/* Image Upload */}
+   961→            <div className="space-y-2 sm:col-span-2">
+   962→              <Label className="text-white">Product Images</Label>
+   963→              <div className="flex flex-wrap gap-2 mb-2">
+   964→                {(() => {
+   965→                  try {
+   966→                    return JSON.parse(formImages || '[]').map((img: string, idx: number) => (
+   967→                      <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-[#2A2A2A]">
+   968→                        <img src={img} alt={`Product ${idx+1}`} className="w-full h-full object-cover" />
+   969→                        <button
+   970→                          type="button"
+   971→                          onClick={() => removeImage(idx)}
+   972→                          className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg w-5 h-5 flex items-center justify-center text-xs"
+   973→                        >
+   974→                          x
+   975→                        </button>
+   976→                      </div>
+   977→                    ))
+   978→                  } catch {
+   979→                    return null
+   980→                  }
+   981→                })()}
+   982→              </div>
+   983→              <div className="flex items-center gap-2">
+   984→                <Input
+   985→                  type="file"
+   986→                  accept="image/*"
+   987→                  onChange={handleImageUpload}
+   988→                  className="bg-[#0A0A0A] border-[#2A2A2A] text-white"
+   989→                  disabled={uploading}
+   990→                />
+   991→                {uploading && <span className="text-yellow-400 text-sm">Uploading...</span>}
+   992→              </div>
+   993→              <p className="text-xs text-gray-500">Upload product images (max 5MB each)</p>
+   994→            </div>
+   995→
+   996→            <div className="space-y-2 sm:col-span-2">
+   997→              <Label className="text-white">Description</Label>
+   998→              <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Product description" rows={3} className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+   999→            </div>
+  1000→            <div className="space-y-2 sm:col-span-2">
+  1001→              <Label className="text-white">Description (Bengali)</Label>
+  1002→              <Textarea value={formDescBN} onChange={(e) => setFormDescBN(e.target.value)} placeholder="বাংলায় বিবরণ" rows={3} className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1003→            </div>
+  1004→            <div className="space-y-2">
+  1005→              <Label className="text-white">Price (৳) *</Label>
+  1006→              <Input type="number" value={formPrice} onChange={(e) => setFormPrice(e.target.value)} placeholder="0" min="0" step="0.01" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1007→            </div>
+  1008→            <div className="space-y-2">
+  1009→              <Label className="text-white">Sale Price (৳)</Label>
+  1010→              <Input type="number" value={formSalePrice} onChange={(e) => setFormSalePrice(e.target.value)} placeholder="0" min="0" step="0.01" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1011→            </div>
+  1012→            <div className="space-y-2">
+  1013→              <Label className="text-white">Category *</Label>
+  1014→              <Select value={formCategory} onValueChange={setFormCategory}>
+  1015→                <SelectTrigger className="w-full bg-[#0A0A0A] border-[#2A2A2A] text-white">
+  1016→                  <SelectValue placeholder="Select category" />
+  1017→                </SelectTrigger>
+  1018→                <SelectContent>
+  1019→                  {categories.map((cat) => (
+  1020→                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+  1021→                  ))}
+  1022→                </SelectContent>
+  1023→              </Select>
+  1024→            </div>
+  1025→            <div className="space-y-2">
+  1026→              <Label className="text-white">Stock</Label>
+  1027→              <Input type="number" value={formStock} onChange={(e) => setFormStock(e.target.value)} min="0" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1028→            </div>
+  1029→            <div className="space-y-2">
+  1030→              <Label className="text-white">SKU</Label>
+  1031→              <Input value={formSku} onChange={(e) => setFormSku(e.target.value)} placeholder="SKU-001" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1032→            </div>
+  1033→            <div className="space-y-2">
+  1034→              <Label className="text-white">Unit</Label>
+  1035→              <Select value={formUnit} onValueChange={setFormUnit}>
+  1036→                <SelectTrigger className="w-full bg-[#0A0A0A] border-[#2A2A2A] text-white">
+  1037→                  <SelectValue />
+  1038→                </SelectTrigger>
+  1039→                <SelectContent>
+  1040→                  <SelectItem value="piece">Piece</SelectItem>
+  1041→                  <SelectItem value="kg">Kilogram</SelectItem>
+  1042→                  <SelectItem value="liter">Liter</SelectItem>
+  1043→                  <SelectItem value="dozen">Dozen</SelectItem>
+  1044→                  <SelectItem value="pack">Pack</SelectItem>
+  1045→                  <SelectItem value="box">Box</SelectItem>
+  1046→                </SelectContent>
+  1047→              </Select>
+  1048→            </div>
+  1049→            <div className="space-y-2 sm:col-span-2">
+  1050→              <Label className="text-white">Tags (comma-separated)</Label>
+  1051→              <Input value={formTags} onChange={(e) => setFormTags(e.target.value)} placeholder="organic, fresh, local" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1052→            </div>
+  1053→            <div className="flex items-center gap-3">
+  1054→              <Switch checked={formFeatured} onCheckedChange={setFormFeatured} />
+  1055→              <Label className="text-white">Featured</Label>
+  1056→            </div>
+  1057→            <div className="flex items-center gap-3">
+  1058→              <Switch checked={formActive} onCheckedChange={setFormActive} />
+  1059→              <Label className="text-white">Active</Label>
+  1060→            </div>
+  1061→          </div>
+  1062→
+  1063→          <DialogFooter>
+  1064→            <Button variant="outline" onClick={() => { setShowModal(false); resetForm() }} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">Cancel</Button>
+  1065→            <Button onClick={handleSave} disabled={saving} style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+  1066→              {saving ? 'Saving...' : editProduct ? 'Update' : 'Create'}
+  1067→            </Button>
+  1068→          </DialogFooter>
+  1069→        </DialogContent>
+  1070→      </Dialog>
+  1071→
+  1072→      {/* Delete Confirmation */}
+  1073→      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+  1074→        <DialogContent className="bg-[#1A1A1A] border-[#2A2A2A]">
+  1075→          <DialogHeader>
+  1076→            <DialogTitle className="text-white">Delete Product</DialogTitle>
+  1077→            <DialogDescription className="text-gray-400">Are you sure you want to delete this product? This action cannot be undone.</DialogDescription>
+  1078→          </DialogHeader>
+  1079→          <DialogFooter>
+  1080→            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">Cancel</Button>
+  1081→            <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</Button>
+  1082→          </DialogFooter>
+  1083→        </DialogContent>
+  1084→      </Dialog>
+  1085→    </div>
+  1086→  )
+  1087→}
+  1088→
+  1089→// ═══════════════════════════════════════════════════════════════
+  1090→// Categories View
+  1091→// ═══════════════════════════════════════════════════════════════
+  1092→
+  1093→function CategoriesView({ token }: { token: string }) {
+  1094→  const [categories, setCategories] = useState<Category[]>([])
+  1095→  const [loading, setLoading] = useState(true)
+  1096→  const [showModal, setShowModal] = useState(false)
+  1097→  const [editCategory, setEditCategory] = useState<Category | null>(null)
+  1098→  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  1099→  const [saving, setSaving] = useState(false)
+  1100→  const [formError, setFormError] = useState('')
+  1101→
+  1102→  // Form state
+  1103→  const [formName, setFormName] = useState('')
+  1104→  const [formNameBN, setFormNameBN] = useState('')
+  1105→  const [formSlug, setFormSlug] = useState('')
+  1106→  const [formSortOrder, setFormSortOrder] = useState('0')
+  1107→  const [formActive, setFormActive] = useState(true)
+  1108→
+  1109→  const fetchCategories = useCallback(async () => {
+  1110→    try {
+  1111→      const res = await adminFetch('/api/categories', token)
+  1112→      const data = await res.json()
+  1113→      setCategories(data.categories || [])
+  1114→    } catch {
+  1115→      // handled
+  1116→    } finally {
+  1117→      setLoading(false)
+  1118→    }
+  1119→  }, [token])
+  1120→
+  1121→  useEffect(() => {
+  1122→    fetchCategories()
+  1123→  }, [fetchCategories])
+  1124→
+  1125→  const resetForm = () => {
+  1126→    setFormName('')
+  1127→    setFormNameBN('')
+  1128→    setFormSlug('')
+  1129→    setFormSortOrder('0')
+  1130→    setFormActive(true)
+  1131→    setFormError('')
+  1132→    setEditCategory(null)
+  1133→  }
+  1134→
+  1135→  const openAddModal = () => {
+  1136→    resetForm()
+  1137→    setShowModal(true)
+  1138→  }
+  1139→
+  1140→  const openEditModal = (cat: Category) => {
+  1141→    setEditCategory(cat)
+  1142→    setFormName(cat.name)
+  1143→    setFormNameBN(cat.nameBN || '')
+  1144→    setFormSlug(cat.slug)
+  1145→    setFormSortOrder(cat.sortOrder.toString())
+  1146→    setFormActive(cat.active)
+  1147→    setFormError('')
+  1148→    setShowModal(true)
+  1149→  }
+  1150→
+  1151→  const handleSave = async () => {
+  1152→    setFormError('')
+  1153→    setSaving(true)
+  1154→
+  1155→    try {
+  1156→      const slug = formSlug.trim() || generateSlug(formName)
+  1157→
+  1158→      const body = {
+  1159→        name: sanitize(formName.trim()),
+  1160→        nameBN: formNameBN.trim() ? sanitize(formNameBN.trim()) : undefined,
+  1161→        slug,
+  1162→        sortOrder: parseInt(formSortOrder) || 0,
+  1163→        active: formActive,
+  1164→      }
+  1165→
+  1166→      if (!body.name || !body.slug) {
+  1167→        setFormError('Name is required')
+  1168→        setSaving(false)
+  1169→        return
+  1170→      }
+  1171→
+  1172→      let res: Response
+  1173→      if (editCategory) {
+  1174→        res = await adminFetch(`/api/admin/categories/${editCategory.id}`, token, {
+  1175→          method: 'PUT',
+  1176→          body: JSON.stringify(body),
+  1177→        })
+  1178→      } else {
+  1179→        res = await adminFetch('/api/categories', token, {
+  1180→          method: 'POST',
+  1181→          body: JSON.stringify(body),
+  1182→        })
+  1183→      }
+  1184→
+  1185→      const data = await res.json()
+  1186→      if (!res.ok) {
+  1187→        setFormError(data.error || 'Failed to save category')
+  1188→        setSaving(false)
+  1189→        return
+  1190→      }
+  1191→
+  1192→      setShowModal(false)
+  1193→      resetForm()
+  1194→      fetchCategories()
+  1195→    } catch {
+  1196→      setFormError('Network error. Please try again.')
+  1197→    } finally {
+  1198→      setSaving(false)
+  1199→    }
+  1200→  }
+  1201→
+  1202→  const handleDelete = async (id: string) => {
+  1203→    try {
+  1204→      const res = await adminFetch(`/api/admin/categories/${id}`, token, { method: 'DELETE' })
+  1205→      const data = await res.json()
+  1206→      if (res.ok) {
+  1207→        setDeleteConfirm(null)
+  1208→        fetchCategories()
+  1209→      } else {
+  1210→        setDeleteConfirm(null)
+  1211→        alert(data.error || 'Failed to delete category')
+  1212→      }
+  1213→    } catch {
+  1214→      setDeleteConfirm(null)
+  1215→    }
+  1216→  }
+  1217→
+  1218→  if (loading) {
+  1219→    return (
+  1220→      <div className="space-y-4">
+  1221→        <Skeleton className="h-10 w-40 bg-[#1A1A1A]" />
+  1222→        {[1, 2, 3, 4].map((i) => (
+  1223→          <Skeleton key={i} className="h-16 rounded-lg bg-[#1A1A1A]" />
+  1224→        ))}
+  1225→      </div>
+  1226→    )
+  1227→  }
+  1228→
+  1229→  return (
+  1230→    <div className="space-y-6">
+  1231→      <div className="flex items-center justify-between">
+  1232→        <h2 className="text-2xl font-bold text-white">Categories</h2>
+  1233→        <Button onClick={openAddModal} style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+  1234→          <PlusIcon className="w-4 h-4 mr-2" /> Add Category
+  1235→        </Button>
+  1236→      </div>
+  1237→
+  1238→      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+  1239→        <Table>
+  1240→          <TableHeader>
+  1241→            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
+  1242→              <TableHead className="text-gray-400">Icon</TableHead>
+  1243→              <TableHead className="text-gray-400">Name</TableHead>
+  1244→              <TableHead className="text-gray-400">Slug</TableHead>
+  1245→              <TableHead className="text-gray-400">Products</TableHead>
+  1246→              <TableHead className="text-gray-400">Status</TableHead>
+  1247→              <TableHead className="text-gray-400">Actions</TableHead>
+  1248→            </TableRow>
+  1249→          </TableHeader>
+  1250→          <TableBody>
+  1251→            {categories.length === 0 ? (
+  1252→              <TableRow>
+  1253→                <TableCell colSpan={6} className="text-center text-gray-500 py-8">No categories found</TableCell>
+  1254→              </TableRow>
+  1255→            ) : (
+  1256→              categories.map((cat) => (
+  1257→                <TableRow key={cat.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+  1258→                  <TableCell>
+  1259→                    <div className="w-10 h-10 rounded-lg bg-[#0A0A0A] flex items-center justify-center">
+  1260→                      {cat.icon ? (
+  1261→                        <span className="text-lg">{cat.icon}</span>
+  1262→                      ) : (
+  1263→                        <GridIcon className="w-5 h-5 text-gray-600" />
+  1264→                      )}
+  1265→                    </div>
+  1266→                  </TableCell>
+  1267→                  <TableCell>
+  1268→                    <div>
+  1269→                      <p className="font-medium text-white">{cat.name}</p>
+  1270→                      {cat.nameBN && <p className="text-xs text-gray-500">{cat.nameBN}</p>}
+  1271→                    </div>
+  1272→                  </TableCell>
+  1273→                  <TableCell className="text-gray-400 font-mono text-xs">{cat.slug}</TableCell>
+  1274→                  <TableCell className="text-gray-300">{cat._count?.products ?? 0}</TableCell>
+  1275→                  <TableCell>
+  1276→                    {cat.active ? (
+  1277→                      <Badge variant="outline" className="bg-[#FFD700]/10 text-[#FFD700] border-[#FFD700]/30">Active</Badge>
+  1278→                    ) : (
+  1279→                      <Badge variant="outline" className="bg-gray-800 text-gray-400 border-gray-600">Inactive</Badge>
+  1280→                    )}
+  1281→                  </TableCell>
+  1282→                  <TableCell>
+  1283→                    <div className="flex items-center gap-1">
+  1284→                      <Button variant="ghost" size="sm" onClick={() => openEditModal(cat)} title="Edit">
+  1285→                        <PencilIcon className="w-4 h-4 text-[#FFD700]" />
+  1286→                      </Button>
+  1287→                      <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(cat.id)} title="Delete">
+  1288→                        <TrashIcon className="w-4 h-4 text-red-500" />
+  1289→                      </Button>
+  1290→                    </div>
+  1291→                  </TableCell>
+  1292→                </TableRow>
+  1293→              ))
+  1294→            )}
+  1295→          </TableBody>
+  1296→        </Table>
+  1297→      </div>
+  1298→
+  1299→      {/* Add/Edit Category Modal */}
+  1300→      <Dialog open={showModal} onOpenChange={(open) => { if (!open) { setShowModal(false); resetForm() } }}>
+  1301→        <DialogContent className="bg-[#1A1A1A] border-[#2A2A2A]">
+  1302→          <DialogHeader>
+  1303→            <DialogTitle className="text-white">{editCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
+  1304→            <DialogDescription className="text-gray-400">
+  1305→              {editCategory ? 'Update category details.' : 'Create a new product category.'}
+  1306→            </DialogDescription>
+  1307→          </DialogHeader>
+  1308→
+  1309→          {formError && (
+  1310→            <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2 rounded-lg text-sm">{formError}</div>
+  1311→          )}
+  1312→
+  1313→          <div className="space-y-4">
+  1314→            <div className="space-y-2">
+  1315→              <Label className="text-white">Name *</Label>
+  1316→              <Input value={formName} onChange={(e) => { setFormName(e.target.value); if (!editCategory) setFormSlug(generateSlug(e.target.value)) }} placeholder="Category name" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1317→            </div>
+  1318→            <div className="space-y-2">
+  1319→              <Label className="text-white">Name (Bengali)</Label>
+  1320→              <Input value={formNameBN} onChange={(e) => setFormNameBN(e.target.value)} placeholder="বাংলায় নাম" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1321→            </div>
+  1322→            <div className="space-y-2">
+  1323→              <Label className="text-white">Slug</Label>
+  1324→              <Input value={formSlug} onChange={(e) => setFormSlug(e.target.value)} placeholder="category-slug" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1325→            </div>
+  1326→            <div className="space-y-2">
+  1327→              <Label className="text-white">Sort Order</Label>
+  1328→              <Input type="number" value={formSortOrder} onChange={(e) => setFormSortOrder(e.target.value)} min="0" className="bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500" />
+  1329→            </div>
+  1330→            <div className="flex items-center gap-3">
+  1331→              <Switch checked={formActive} onCheckedChange={setFormActive} />
+  1332→              <Label className="text-white">Active</Label>
+  1333→            </div>
+  1334→          </div>
+  1335→
+  1336→          <DialogFooter>
+  1337→            <Button variant="outline" onClick={() => { setShowModal(false); resetForm() }} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">Cancel</Button>
+  1338→            <Button onClick={handleSave} disabled={saving} style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+  1339→              {saving ? 'Saving...' : editCategory ? 'Update' : 'Create'}
+  1340→            </Button>
+  1341→          </DialogFooter>
+  1342→        </DialogContent>
+  1343→      </Dialog>
+  1344→
+  1345→      {/* Delete Confirmation */}
+  1346→      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+  1347→        <DialogContent className="bg-[#1A1A1A] border-[#2A2A2A]">
+  1348→          <DialogHeader>
+  1349→            <DialogTitle className="text-white">Delete Category</DialogTitle>
+  1350→            <DialogDescription className="text-gray-400">Are you sure? Categories with products cannot be deleted.</DialogDescription>
+  1351→          </DialogHeader>
+  1352→          <DialogFooter>
+  1353→            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">Cancel</Button>
+  1354→            <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</Button>
+  1355→          </DialogFooter>
+  1356→        </DialogContent>
+  1357→      </Dialog>
+  1358→    </div>
+  1359→  )
+  1360→}
+  1361→
+  1362→// ═══════════════════════════════════════════════════════════════
+  1363→// Orders View
+  1364→// ═══════════════════════════════════════════════════════════════
+  1365→
+  1366→function OrdersView({ token }: { token: string }) {
+  1367→  const [orders, setOrders] = useState<Order[]>([])
+  1368→  const [loading, setLoading] = useState(true)
+  1369→  const [page, setPage] = useState(1)
+  1370→  const [totalPages, setTotalPages] = useState(1)
+  1371→  const [statusFilter, setStatusFilter] = useState('')
+  1372→  const [detailOrder, setDetailOrder] = useState<Order | null>(null)
+  1373→  const [updating, setUpdating] = useState<string | null>(null)
+  1374→
+  1375→  const fetchOrders = useCallback(async () => {
+  1376→    try {
+  1377→      let url = `/api/orders?page=${page}&limit=10`
+  1378→      if (statusFilter) url += `&status=${statusFilter}`
+  1379→      const res = await adminFetch(url, token)
+  1380→      const data = await res.json()
+  1381→      setOrders(data.orders || [])
+  1382→      setTotalPages(data.totalPages || 1)
+  1383→    } catch {
+  1384→      // handled
+  1385→    } finally {
+  1386→      setLoading(false)
+  1387→    }
+  1388→  }, [token, page, statusFilter])
+  1389→
+  1390→  useEffect(() => {
+  1391→    fetchOrders()
+  1392→  }, [fetchOrders])
+  1393→
+  1394→  const updateStatus = async (orderId: string, status: string) => {
+  1395→    setUpdating(orderId)
+  1396→    try {
+  1397→      const res = await adminFetch('/api/orders', token, {
+  1398→        method: 'PUT',
+  1399→        body: JSON.stringify({ orderId, status }),
+  1400→      })
+  1401→      if (res.ok) {
+  1402→        fetchOrders()
+  1403→        if (detailOrder?.id === orderId) {
+  1404→          setDetailOrder({ ...detailOrder, status })
+  1405→        }
+  1406→      }
+  1407→    } catch {
+  1408→      // handled
+  1409→    } finally {
+  1410→      setUpdating(null)
+  1411→    }
+  1412→  }
+  1413→
+  1414→  const openDetail = (order: Order) => {
+  1415→    setDetailOrder(order)
+  1416→  }
+  1417→
+  1418→  if (loading) {
+  1419→    return (
+  1420→      <div className="space-y-4">
+  1421→        <Skeleton className="h-10 w-32 bg-[#1A1A1A]" />
+  1422→        {[1, 2, 3, 4, 5].map((i) => (
+  1423→          <Skeleton key={i} className="h-16 rounded-lg bg-[#1A1A1A]" />
+  1424→        ))}
+  1425→      </div>
+  1426→    )
+  1427→  }
+  1428→
+  1429→  return (
+  1430→    <div className="space-y-6">
+  1431→      <div className="flex items-center justify-between flex-wrap gap-4">
+  1432→        <h2 className="text-2xl font-bold text-white">Orders</h2>
+  1433→        <Select value={statusFilter || 'all'} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
+  1434→          <SelectTrigger className="w-40 bg-[#0A0A0A] border-[#2A2A2A] text-white">
+  1435→            <SelectValue placeholder="Filter by status" />
+  1436→          </SelectTrigger>
+  1437→          <SelectContent>
+  1438→            <SelectItem value="all">All Status</SelectItem>
+  1439→            <SelectItem value="pending">Pending</SelectItem>
+  1440→            <SelectItem value="confirmed">Confirmed</SelectItem>
+  1441→            <SelectItem value="processing">Processing</SelectItem>
+  1442→            <SelectItem value="shipped">Shipped</SelectItem>
+  1443→            <SelectItem value="delivered">Delivered</SelectItem>
+  1444→            <SelectItem value="cancelled">Cancelled</SelectItem>
+  1445→          </SelectContent>
+  1446→        </Select>
+  1447→      </div>
+  1448→
+  1449→      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+  1450→        <Table>
+  1451→          <TableHeader>
+  1452→            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
+  1453→              <TableHead className="text-gray-400">Order ID</TableHead>
+  1454→              <TableHead className="text-gray-400">Customer</TableHead>
+  1455→              <TableHead className="text-gray-400">Items</TableHead>
+  1456→              <TableHead className="text-gray-400">Total</TableHead>
+  1457→              <TableHead className="text-gray-400">Status</TableHead>
+  1458→              <TableHead className="text-gray-400">Date</TableHead>
+  1459→              <TableHead className="text-gray-400">Actions</TableHead>
+  1460→            </TableRow>
+  1461→          </TableHeader>
+  1462→          <TableBody>
+  1463→            {orders.length === 0 ? (
+  1464→              <TableRow>
+  1465→                <TableCell colSpan={7} className="text-center text-gray-500 py-8">No orders found</TableCell>
+  1466→              </TableRow>
+  1467→            ) : (
+  1468→              orders.map((order) => (
+  1469→                <TableRow key={order.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+  1470→                  <TableCell className="font-mono text-xs text-white">{order.id.slice(-8)}</TableCell>
+  1471→                  <TableCell className="text-white">{order.user?.name || order.user?.email || 'N/A'}</TableCell>
+  1472→                  <TableCell className="text-gray-300">{order.orderItems?.length ?? 0}</TableCell>
+  1473→                  <TableCell className="font-medium text-white">{formatTaka(order.total)}</TableCell>
+  1474→                  <TableCell>
+  1475→                    <Select
+  1476→                      value={order.status}
+  1477→                      onValueChange={(v) => updateStatus(order.id, v)}
+  1478→                      disabled={updating === order.id}
+  1479→                    >
+  1480→                      <SelectTrigger className="w-32 h-8 text-xs bg-[#0A0A0A] border-[#2A2A2A] text-white">
+  1481→                        <SelectValue />
+  1482→                      </SelectTrigger>
+  1483→                      <SelectContent>
+  1484→                        <SelectItem value="pending">Pending</SelectItem>
+  1485→                        <SelectItem value="confirmed">Confirmed</SelectItem>
+  1486→                        <SelectItem value="processing">Processing</SelectItem>
+  1487→                        <SelectItem value="shipped">Shipped</SelectItem>
+  1488→                        <SelectItem value="delivered">Delivered</SelectItem>
+  1489→                        <SelectItem value="cancelled">Cancelled</SelectItem>
+  1490→                      </SelectContent>
+  1491→                    </Select>
+  1492→                  </TableCell>
+  1493→                  <TableCell className="text-xs text-gray-500">{formatDate(order.createdAt)}</TableCell>
+  1494→                  <TableCell>
+  1495→                    <Button variant="ghost" size="sm" onClick={() => openDetail(order)} title="View details">
+  1496→                      <EyeIcon className="w-4 h-4 text-gray-400" />
+  1497→                    </Button>
+  1498→                  </TableCell>
+  1499→                </TableRow>
+  1500→              ))
+  1501→            )}
+  1502→          </TableBody>
+  1503→        </Table>
+  1504→
+  1505→        {totalPages > 1 && (
+  1506→          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A2A2A]">
+  1507→            <p className="text-sm text-gray-400">Page {page} of {totalPages}</p>
+  1508→            <div className="flex gap-2">
+  1509→              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+  1510→                <ChevronLeftIcon className="w-4 h-4" />
+  1511→              </Button>
+  1512→              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+  1513→                <ChevronRightIcon className="w-4 h-4" />
+  1514→              </Button>
+  1515→            </div>
+  1516→          </div>
+  1517→        )}
+  1518→      </div>
+  1519→
+  1520→      {/* Order Detail Modal */}
+  1521→      <Dialog open={!!detailOrder} onOpenChange={() => setDetailOrder(null)}>
+  1522→        <DialogContent className="sm:max-w-lg bg-[#1A1A1A] border-[#2A2A2A]">
+  1523→          <DialogHeader>
+  1524→            <DialogTitle className="text-white">Order Details</DialogTitle>
+  1525→            <DialogDescription className="text-gray-400">Order #{detailOrder?.id.slice(-8)}</DialogDescription>
+  1526→          </DialogHeader>
+  1527→          {detailOrder && (
+  1528→            <div className="space-y-4">
+  1529→              <div className="grid grid-cols-2 gap-4 text-sm">
+  1530→                <div>
+  1531→                  <p className="text-gray-400">Customer</p>
+  1532→                  <p className="font-medium text-white">{detailOrder.user?.name || 'N/A'}</p>
+  1533→                </div>
+  1534→                <div>
+  1535→                  <p className="text-gray-400">Email</p>
+  1536→                  <p className="font-medium text-white">{detailOrder.user?.email || 'N/A'}</p>
+  1537→                </div>
+  1538→                <div>
+  1539→                  <p className="text-gray-400">Phone</p>
+  1540→                  <p className="font-medium text-white">{detailOrder.phone || detailOrder.user?.phone || 'N/A'}</p>
+  1541→                </div>
+  1542→                <div>
+  1543→                  <p className="text-gray-400">Payment</p>
+  1544→                  <p className="font-medium text-white uppercase">{detailOrder.paymentMethod}</p>
+  1545→                </div>
+  1546→                <div className="col-span-2">
+  1547→                  <p className="text-gray-400">Address</p>
+  1548→                  <p className="font-medium text-white">{detailOrder.address || 'N/A'}</p>
+  1549→                </div>
+  1550→                {detailOrder.note && (
+  1551→                  <div className="col-span-2">
+  1552→                    <p className="text-gray-400">Note</p>
+  1553→                    <p className="font-medium text-white">{detailOrder.note}</p>
+  1554→                  </div>
+  1555→                )}
+  1556→              </div>
+  1557→
+  1558→              <div className="border-t border-[#2A2A2A] pt-4">
+  1559→                <p className="text-sm font-medium text-gray-400 mb-2">Order Items</p>
+  1560→                <div className="space-y-2 max-h-48 overflow-y-auto">
+  1561→                  {detailOrder.orderItems?.map((item) => (
+  1562→                    <div key={item.id} className="flex items-center justify-between text-sm bg-[#0A0A0A] rounded-lg p-2">
+  1563→                      <div className="flex items-center gap-2">
+  1564→                        {item.image && <img src={item.image} alt="" className="w-8 h-8 rounded object-cover" />}
+  1565→                        <span className="text-white">{item.name}</span>
+  1566→                      </div>
+  1567→                      <div className="text-right">
+  1568→                        <p className="text-gray-300">{item.quantity} x {formatTaka(item.price)}</p>
+  1569→                        <p className="font-medium text-white">{formatTaka(item.quantity * item.price)}</p>
+  1570→                      </div>
+  1571→                    </div>
+  1572→                  ))}
+  1573→                </div>
+  1574→              </div>
+  1575→
+  1576→              <div className="border-t border-[#2A2A2A] pt-4 flex justify-between items-center">
+  1577→                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(detailOrder.status)}`}>
+  1578→                  {detailOrder.status}
+  1579→                </span>
+  1580→                <p className="text-lg font-bold text-white">{formatTaka(detailOrder.total)}</p>
+  1581→              </div>
+  1582→            </div>
+  1583→          )}
+  1584→        </DialogContent>
+  1585→      </Dialog>
+  1586→    </div>
+  1587→  )
+  1588→}
+  1589→
+  1590→// ═══════════════════════════════════════════════════════════════
+  1591→// Users View
+  1592→// ═══════════════════════════════════════════════════════════════
+  1593→
+  1594→function UsersView({ token }: { token: string }) {
+  1595→  const [users, setUsers] = useState<UserItem[]>([])
+  1596→  const [loading, setLoading] = useState(true)
+  1597→  const [page, setPage] = useState(1)
+  1598→  const [totalPages, setTotalPages] = useState(1)
+  1599→  const [search, setSearch] = useState('')
+  1600→
+  1601→  const fetchUsers = useCallback(async () => {
+  1602→    try {
+  1603→      let url = `/api/admin/users?page=${page}&limit=15`
+  1604→      if (search) url += `&search=${encodeURIComponent(search)}`
+  1605→      const res = await adminFetch(url, token)
+  1606→      const data = await res.json()
+  1607→      setUsers(data.users || [])
+  1608→      setTotalPages(data.totalPages || 1)
+  1609→    } catch {
+  1610→      // handled
+  1611→    } finally {
+  1612→      setLoading(false)
+  1613→    }
+  1614→  }, [token, page, search])
+  1615→
+  1616→  useEffect(() => {
+  1617→    fetchUsers()
+  1618→  }, [fetchUsers])
+  1619→
+  1620→  if (loading) {
+  1621→    return (
+  1622→      <div className="space-y-4">
+  1623→        <Skeleton className="h-10 w-32 bg-[#1A1A1A]" />
+  1624→        {[1, 2, 3, 4, 5].map((i) => (
+  1625→          <Skeleton key={i} className="h-16 rounded-lg bg-[#1A1A1A]" />
+  1626→        ))}
+  1627→      </div>
+  1628→    )
+  1629→  }
+  1630→
+  1631→  return (
+  1632→    <div className="space-y-6">
+  1633→      <div className="flex items-center justify-between flex-wrap gap-4">
+  1634→        <h2 className="text-2xl font-bold text-white">Users</h2>
+  1635→        <div className="relative">
+  1636→          <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+  1637→          <Input
+  1638→            className="pl-9 w-64 bg-[#0A0A0A] border-[#2A2A2A] text-white placeholder:text-gray-500"
+  1639→            placeholder="Search by name or email..."
+  1640→            value={search}
+  1641→            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+  1642→          />
+  1643→        </div>
+  1644→      </div>
+  1645→
+  1646→      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+  1647→        <Table>
+  1648→          <TableHeader>
+  1649→            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
+  1650→              <TableHead className="text-gray-400">User</TableHead>
+  1651→              <TableHead className="text-gray-400">Email</TableHead>
+  1652→              <TableHead className="text-gray-400">Phone</TableHead>
+  1653→              <TableHead className="text-gray-400">Role</TableHead>
+  1654→              <TableHead className="text-gray-400">Orders</TableHead>
+  1655→              <TableHead className="text-gray-400">Joined</TableHead>
+  1656→            </TableRow>
+  1657→          </TableHeader>
+  1658→          <TableBody>
+  1659→            {users.length === 0 ? (
+  1660→              <TableRow>
+  1661→                <TableCell colSpan={6} className="text-center text-gray-500 py-8">No users found</TableCell>
+  1662→              </TableRow>
+  1663→            ) : (
+  1664→              users.map((user) => (
+  1665→                <TableRow key={user.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+  1666→                  <TableCell>
+  1667→                    <div className="flex items-center gap-3">
+  1668→                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium" style={{ backgroundColor: '#FFD700', color: '#0A0A0A' }}>
+  1669→                        {(user.name || user.email)[0].toUpperCase()}
+  1670→                      </div>
+  1671→                      <span className="font-medium text-white">{user.name || 'N/A'}</span>
+  1672→                    </div>
+  1673→                  </TableCell>
+  1674→                  <TableCell className="text-gray-300">{user.email}</TableCell>
+  1675→                  <TableCell className="text-gray-300">{user.phone || '-'}</TableCell>
+  1676→                  <TableCell>
+  1677→                    <Badge variant="outline" className={user.role === 'admin' ? 'bg-[#FFD700]/10 text-[#FFD700] border-[#FFD700]/30' : 'bg-gray-800 text-gray-400 border-gray-600'}>
+  1678→                      {user.role}
+  1679→                    </Badge>
+  1680→                  </TableCell>
+  1681→                  <TableCell className="text-gray-300">{user._count?.orders ?? 0}</TableCell>
+  1682→                  <TableCell className="text-xs text-gray-500">{formatDate(user.createdAt)}</TableCell>
+  1683→                </TableRow>
+  1684→              ))
+  1685→            )}
+  1686→          </TableBody>
+  1687→        </Table>
+  1688→
+  1689→        {totalPages > 1 && (
+  1690→          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A2A2A]">
+  1691→            <p className="text-sm text-gray-400">Page {page} of {totalPages}</p>
+  1692→            <div className="flex gap-2">
+  1693→              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+  1694→                <ChevronLeftIcon className="w-4 h-4" />
+  1695→              </Button>
+  1696→              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+  1697→                <ChevronRightIcon className="w-4 h-4" />
+  1698→              </Button>
+  1699→            </div>
+  1700→          </div>
+  1701→        )}
+  1702→      </div>
+  1703→    </div>
+  1704→  )
+  1705→}
+  1706→
+  1707→// ═══════════════════════════════════════════════════════════════
+  1708→// User Logs View
+  1709→// ═══════════════════════════════════════════════════════════════
+  1710→
+  1711→function UserLogsView({ token }: { token: string }) {
+  1712→  const [logs, setLogs] = useState<UserLogItem[]>([])
+  1713→  const [actionTypes, setActionTypes] = useState<string[]>([])
+  1714→  const [loading, setLoading] = useState(true)
+  1715→  const [page, setPage] = useState(1)
+  1716→  const [totalPages, setTotalPages] = useState(1)
+  1717→  const [actionFilter, setActionFilter] = useState('')
+  1718→
+  1719→  const fetchLogs = useCallback(async () => {
+  1720→    try {
+  1721→      let url = `/api/admin/user-logs?page=${page}&limit=15`
+  1722→      if (actionFilter) url += `&action=${encodeURIComponent(actionFilter)}`
+  1723→      const res = await adminFetch(url, token)
+  1724→      const data = await res.json()
+  1725→      setLogs(data.logs || [])
+  1726→      setTotalPages(data.totalPages || 1)
+  1727→      if (data.actionTypes) setActionTypes(data.actionTypes)
+  1728→    } catch {
+  1729→      // handled
+  1730→    } finally {
+  1731→      setLoading(false)
+  1732→    }
+  1733→  }, [token, page, actionFilter])
+  1734→
+  1735→  useEffect(() => {
+  1736→    fetchLogs()
+  1737→  }, [fetchLogs])
+  1738→
+  1739→  if (loading) {
+  1740→    return (
+  1741→      <div className="space-y-4">
+  1742→        <Skeleton className="h-10 w-32 bg-[#1A1A1A]" />
+  1743→        {[1, 2, 3, 4, 5].map((i) => (
+  1744→          <Skeleton key={i} className="h-16 rounded-lg bg-[#1A1A1A]" />
+  1745→        ))}
+  1746→      </div>
+  1747→    )
+  1748→  }
+  1749→
+  1750→  return (
+  1751→    <div className="space-y-6">
+  1752→      <div className="flex items-center justify-between flex-wrap gap-4">
+  1753→        <h2 className="text-2xl font-bold text-white">User Logs</h2>
+  1754→        <Select value={actionFilter || 'all'} onValueChange={(v) => { setActionFilter(v === 'all' ? '' : v); setPage(1) }}>
+  1755→          <SelectTrigger className="w-44 bg-[#0A0A0A] border-[#2A2A2A] text-white">
+  1756→            <SelectValue placeholder="Filter by action" />
+  1757→          </SelectTrigger>
+  1758→          <SelectContent>
+  1759→            <SelectItem value="all">All Actions</SelectItem>
+  1760→            {actionTypes.map((action) => (
+  1761→              <SelectItem key={action} value={action}>{action}</SelectItem>
+  1762→            ))}
+  1763→          </SelectContent>
+  1764→        </Select>
+  1765→      </div>
+  1766→
+  1767→      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+  1768→        <Table>
+  1769→          <TableHeader>
+  1770→            <TableRow className="border-b border-[#2A2A2A] hover:bg-transparent">
+  1771→              <TableHead className="text-gray-400">Timestamp</TableHead>
+  1772→              <TableHead className="text-gray-400">User</TableHead>
+  1773→              <TableHead className="text-gray-400">Action</TableHead>
+  1774→              <TableHead className="text-gray-400">Details</TableHead>
+  1775→              <TableHead className="text-gray-400">IP</TableHead>
+  1776→            </TableRow>
+  1777→          </TableHeader>
+  1778→          <TableBody>
+  1779→            {logs.length === 0 ? (
+  1780→              <TableRow>
+  1781→                <TableCell colSpan={5} className="text-center text-gray-500 py-8">No logs found</TableCell>
+  1782→              </TableRow>
+  1783→            ) : (
+  1784→              logs.map((log) => (
+  1785→                <TableRow key={log.id} className="border-b border-[#2A2A2A] hover:bg-[#222]">
+  1786→                  <TableCell className="text-xs text-gray-500 whitespace-nowrap">{formatDate(log.createdAt)}</TableCell>
+  1787→                  <TableCell className="text-white">{log.user?.name || log.user?.email || 'System'}</TableCell>
+  1788→                  <TableCell>
+  1789→                    <Badge variant="outline" className="bg-[#FFD700]/10 text-[#FFD700] border-[#FFD700]/30 text-xs">
+  1790→                      {log.action}
+  1791→                    </Badge>
+  1792→                  </TableCell>
+  1793→                  <TableCell className="text-sm text-gray-400 max-w-xs truncate">{log.details || '-'}</TableCell>
+  1794→                  <TableCell className="text-xs text-gray-500 font-mono">{log.ip || '-'}</TableCell>
+  1795→                </TableRow>
+  1796→              ))
+  1797→            )}
+  1798→          </TableBody>
+  1799→        </Table>
+  1800→
+  1801→        {totalPages > 1 && (
+  1802→          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A2A2A]">
+  1803→            <p className="text-sm text-gray-400">Page {page} of {totalPages}</p>
+  1804→            <div className="flex gap-2">
+  1805→              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+  1806→                <ChevronLeftIcon className="w-4 h-4" />
+  1807→              </Button>
+  1808→              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="border-[#2A2A2A] text-gray-300 hover:bg-[#222]">
+  1809→                <ChevronRightIcon className="w-4 h-4" />
+  1810→              </Button>
+  1811→            </div>
+  1812→          </div>
+  1813→        )}
+  1814→      </div>
+  1815→    </div>
+  1816→  )
+  1817→}
+  1818→
+  1819→// ═══════════════════════════════════════════════════════════════
+  1820→// Sidebar Navigation
+  1821→// ═══════════════════════════════════════════════════════════════
+  1822→
+  1823→const navItems: { key: AdminView; label: string; icon: React.ReactNode }[] = [
+  1824→  { key: 'dashboard', label: 'Dashboard', icon: <HomeIcon /> },
+  1825→  { key: 'products', label: 'Products', icon: <BoxIcon /> },
+  1826→  { key: 'categories', label: 'Categories', icon: <GridIcon /> },
+  1827→  { key: 'orders', label: 'Orders', icon: <ShoppingBagIcon /> },
+  1828→  { key: 'users', label: 'Users', icon: <UsersIcon /> },
+  1829→  { key: 'user-logs', label: 'User Logs', icon: <FileTextIcon /> },
+  1830→]
+  1831→
+  1832→function Sidebar({
+  1833→  currentView,
+  1834→  onViewChange,
+  1835→  onLogout,
+  1836→  mobileOpen,
+  1837→  onMobileClose,
+  1838→}: {
+  1839→  currentView: AdminView
+  1840→  onViewChange: (v: AdminView) => void
+  1841→  onLogout: () => void
+  1842→  mobileOpen: boolean
+  1843→  onMobileClose: () => void
+  1844→}) {
+  1845→  const sidebarContent = (
+  1846→    <div className="flex flex-col h-full">
+  1847→      {/* Logo */}
+  1848→      <div className="p-6 border-b border-white/10">
+  1849→        <div className="flex items-center gap-3">
+  1850→          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FFD700' }}>
+  1851→            <span className="text-[#0A0A0A] text-lg font-bold">BB</span>
+  1852→          </div>
+  1853→          <div>
+  1854→            <h1 className="text-white font-bold text-lg">Bangla Bazar</h1>
+  1855→            <p className="text-yellow-300 text-xs">Admin Panel</p>
+  1856→          </div>
+  1857→        </div>
+  1858→      </div>
+  1859→
+  1860→      {/* Navigation */}
+  1861→      <nav className="flex-1 p-4 space-y-1">
+  1862→        {navItems.map((item) => (
+  1863→          <button
+  1864→            key={item.key}
+  1865→            onClick={() => { onViewChange(item.key); onMobileClose() }}
+  1866→            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+  1867→              currentView === item.key
+  1868→                ? 'bg-[#FFD700] text-[#0A0A0A]'
+  1869→                : 'text-gray-400 hover:bg-white/10 hover:text-white'
+  1870→            }`}
+  1871→          >
+  1872→            {item.icon}
+  1873→            {item.label}
+  1874→          </button>
+  1875→        ))}
+  1876→      </nav>
+  1877→
+  1878→      {/* Logout */}
+  1879→      <div className="p-4 border-t border-white/10">
+  1880→        <button
+  1881→          onClick={onLogout}
+  1882→          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+  1883→        >
+  1884→          <LogOutIcon />
+  1885→          Logout
+  1886→        </button>
+  1887→      </div>
+  1888→    </div>
+  1889→  )
+  1890→
+  1891→  return (
+  1892→    <>
+  1893→      {/* Desktop Sidebar */}
+  1894→      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0" style={{ backgroundColor: '#0A0A0A' }}>
+  1895→        {sidebarContent}
+  1896→      </aside>
+  1897→
+  1898→      {/* Mobile Overlay */}
+  1899→      {mobileOpen && (
+  1900→        <div className="fixed inset-0 z-50 lg:hidden">
+  1901→          <div className="fixed inset-0 bg-black/50" onClick={onMobileClose} />
+  1902→          <aside className="fixed inset-y-0 left-0 w-64 z-50" style={{ backgroundColor: '#0A0A0A' }}>
+  1903→            <div className="absolute top-4 right-4">
+  1904→              <button onClick={onMobileClose} className="text-white p-1">
+  1905→                <XIcon className="w-5 h-5" />
+  1906→              </button>
+  1907→            </div>
+  1908→            {sidebarContent}
+  1909→          </aside>
+  1910→        </div>
+  1911→      )}
+  1912→    </>
+  1913→  )
+  1914→}
+  1915→
+  1916→// ═══════════════════════════════════════════════════════════════
+  1917→// Main Admin Panel
+  1918→// ═══════════════════════════════════════════════════════════════
+  1919→
+  1920→export default function AdminPage() {
+  1921→  const [auth, setAuth] = useState<AdminAuth | null>(null)
+  1922→  const [currentView, setCurrentView] = useState<AdminView>('dashboard')
+  1923→  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  1924→  const [initializing, setInitializing] = useState(true)
+  1925→
+  1926→  // Check localStorage on mount
+  1927→  useEffect(() => {
+  1928→    try {
+  1929→      const stored = localStorage.getItem('bdk-admin')
+  1930→      if (stored) {
+  1931→        const data = JSON.parse(stored)
+  1932→        if (data?.adminToken && data?.adminUser) {
+  1933→          setAuth(data)
+  1934→        }
+  1935→      }
+  1936→    } catch {
+  1937→      // ignore
+  1938→    }
+  1939→    setInitializing(false)
+  1940→  }, [])
+  1941→
+  1942→  const handleLogin = (authData: AdminAuth) => {
+  1943→    setAuth(authData)
+  1944→  }
+  1945→
+  1946→  const handleLogout = async () => {
+  1947→    if (auth?.adminToken) {
+  1948→      try {
+  1949→        await fetch('/api/admin/logout', {
+  1950→          method: 'POST',
+  1951→          headers: {
+  1952→            'Authorization': `Bearer ${auth.adminToken}`,
+  1953→            'Content-Type': 'application/json',
+  1954→          },
+  1955→        })
+  1956→      } catch {
+  1957→        // silent
+  1958→      }
+  1959→    }
+  1960→    localStorage.removeItem('bdk-admin')
+  1961→    setAuth(null)
+  1962→    setCurrentView('dashboard')
+  1963→  }
+  1964→
+  1965→  // Handle 401 - redirect to login
+  1966→  const handleUnauthorized = useCallback(() => {
+  1967→    localStorage.removeItem('bdk-admin')
+  1968→    setAuth(null)
+  1969→  }, [])
+  1970→
+  1971→  // Wrap fetch with 401 handling
+  1972→  useEffect(() => {
+  1973→    const originalFetch = window.fetch
+  1974→    window.fetch = function(...args) {
+  1975→      return originalFetch.apply(this, args).then((response) => {
+  1976→        if (response.status === 401 && auth) {
+  1977→          // Check if this is an admin API call
+  1978→          const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url
+  1979→          if (url.includes('/api/admin') || (url.includes('/api/') && auth?.adminToken)) {
+  1980→            // Only auto-logout if the request had an auth header (was meant to be authenticated)
+  1981→            const options = args[1] as RequestInit | undefined
+  1982→            const headers = options?.headers as Record<string, string> | undefined
+  1983→            if (headers?.['Authorization'] || headers?.['authorization']) {
+  1984→              handleUnauthorized()
+  1985→            }
+  1986→          }
+  1987→        }
+  1988→        return response
+  1989→      })
+  1990→    }
+  1991→    return () => { window.fetch = originalFetch }
+  1992→  }, [auth, handleUnauthorized])
+  1993→
+  1994→  if (initializing) {
+  1995→    return (
+  1996→      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
+  1997→        <div className="w-10 h-10 border-4 border-gray-700 rounded-full animate-spin" style={{ borderTopColor: '#FFD700' }} />
+  1998→      </div>
+  1999→    )
+  2000→  }
+
+[showing lines 1-2000 of 2069; use offset=2001 with limit to continue reading]

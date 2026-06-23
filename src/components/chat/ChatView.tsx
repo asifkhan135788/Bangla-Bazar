@@ -2,27 +2,44 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, Loader2 } from 'lucide-react'
+import { X, Send, Loader2, ArrowLeft, ImageIcon } from 'lucide-react'
 import { useAuthStore } from '@/store/auth-store'
 import { useNavStore } from '@/store/nav-store'
 import { useLangStore } from '@/store/lang-store'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { subscribeToChat, isSupabaseConfigured } from '@/lib/supabase'
+import { subscribeToChat, subscribeToTyping, broadcastTyping, isSupabaseConfigured } from '@/lib/supabase'
+
+interface ChatUser {
+  id: string
+  name: string | null
+  avatar: string | null
+  email: string
+}
 
 interface ChatMessage {
   id: string
   senderId: string
-  receiverId: string
+  receiverId: string | null
   message: string
   read: boolean
   createdAt: string
   senderName?: string
   senderType?: string
+  sender?: ChatUser
+}
+
+interface ChatConversation {
+  otherUserId: string
+  otherUserName: string
+  otherUserAvatar: string | null
+  lastMessage: string
+  lastMessageTime: string
+  unreadCount: number
+  senderType: string
 }
 
 function sanitizeInput(input: string): string {
   if (typeof input !== 'string') return ''
-  // Strip HTML tags and trim
   return input.replace(/<[^>]*>/g, '').trim()
 }
 
@@ -39,9 +56,135 @@ function formatTime(dateStr: string): string {
   }
 }
 
-export function ChatView() {
+function formatRelativeTime(dateStr: string): string {
+  try {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString('en-BD', { month: 'short', day: 'numeric' })
+  } catch {
+    return ''
+  }
+}
+
+// ─── Conversation List View ────────────────────────────────────────────────
+function ConversationList({
+  conversations,
+  onSelect,
+  loading,
+}: {
+  conversations: ChatConversation[]
+  onSelect: (userId: string) => void
+  loading: boolean
+}) {
+  const { t } = useLangStore()
+  const { user } = useAuthStore()
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 text-[#FFD700] animate-spin" />
+      </div>
+    )
+  }
+
+  if (conversations.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full px-4">
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center mb-3"
+          style={{ backgroundColor: 'rgba(255, 215, 0, 0.08)' }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </div>
+        <p className="text-sm text-muted-foreground text-center">{t('noMessages')}</p>
+        <button
+          onClick={() => onSelect('admin')}
+          className="mt-4 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D] transition-colors"
+        >
+          {t('contactSupport')}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1">
+      {conversations.map((conv) => (
+        <button
+          key={conv.otherUserId}
+          onClick={() => onSelect(conv.otherUserId)}
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#FFD700]/5 transition-colors text-left"
+        >
+          {/* Avatar */}
+          <div className="relative shrink-0">
+            {conv.otherUserAvatar ? (
+              <img
+                src={conv.otherUserAvatar}
+                alt={conv.otherUserName}
+                className="w-12 h-12 rounded-full object-cover border border-border"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-[#FFD700]/20 flex items-center justify-center">
+                <span className="text-[#FFD700] font-bold text-sm">
+                  {conv.otherUserId === 'admin'
+                    ? 'CS'
+                    : (conv.otherUserName?.[0]?.toUpperCase() || 'U')}
+                </span>
+              </div>
+            )}
+            {/* Online indicator (always show for admin) */}
+            {conv.otherUserId === 'admin' && (
+              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background" />
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground truncate">
+                {conv.otherUserId === 'admin' ? t('customerSupport') : conv.otherUserName}
+              </h3>
+              <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                {formatRelativeTime(conv.lastMessageTime)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between mt-0.5">
+              <p className="text-xs text-muted-foreground truncate">
+                {conv.senderType === 'admin' ? '' : t('you') + ': '}{conv.lastMessage}
+              </p>
+              {conv.unreadCount > 0 && (
+                <span className="ml-2 shrink-0 flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold bg-[#FFD700] text-[#0A0A0A] px-1">
+                  {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                </span>
+              )}
+            </div>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ─── Chat Room View ────────────────────────────────────────────────────────
+function ChatRoom({
+  otherUserId,
+  onBack,
+}: {
+  otherUserId: string
+  onBack: () => void
+}) {
   const { user, token } = useAuthStore()
-  const { chatSenderId, goBack } = useNavStore()
   const { t } = useLangStore()
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -49,17 +192,43 @@ export function ChatView() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [otherUser, setOtherUser] = useState<ChatUser | null>(null)
+  const [isTyping, setIsTyping] = useState(false)
+  const [isOtherOnline, setIsOtherOnline] = useState(otherUserId === 'admin')
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
 
+  // Fetch other user info
+  useEffect(() => {
+    if (otherUserId === 'admin') {
+      setOtherUser({ id: 'admin', name: 'Customer Support', avatar: null, email: 'admin@banglabazar.com' })
+      return
+    }
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`/api/chat?action=user_info&userId=${otherUserId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setOtherUser(data.user || null)
+        }
+      } catch {
+        // ignore
+      }
+    }
+    fetchUser()
+  }, [otherUserId, token])
+
   // Fetch messages
   useEffect(() => {
-    if (!user || !chatSenderId) {
+    if (!user || !otherUserId) {
       setLoading(false)
       return
     }
@@ -69,12 +238,8 @@ export function ChatView() {
       setError(null)
       try {
         const res = await fetch(
-          `/api/chat?senderId=${chatSenderId}&userId=${user.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          `/api/chat?senderId=${otherUserId}&userId=${user.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         )
         if (!res.ok) throw new Error('Failed to load messages')
         const data = await res.json()
@@ -88,20 +253,32 @@ export function ChatView() {
 
     fetchMessages()
 
-    // Try Supabase Realtime first, fallback to polling
+    // Supabase Realtime subscription
     let realtimeChannel: ReturnType<typeof subscribeToChat> | null = null
+    let typingChannel: ReturnType<typeof subscribeToTyping> | null = null
     let pollingInterval: ReturnType<typeof setInterval> | null = null
 
     if (isSupabaseConfigured()) {
-      // Use Supabase Realtime
       realtimeChannel = subscribeToChat(user.id, (payload) => {
         const newMsg = payload.new as ChatMessage
-        if (newMsg) {
+        if (newMsg && (newMsg.senderId === otherUserId || newMsg.receiverId === otherUserId)) {
           setMessages((prev) => {
-            // Avoid duplicates
             if (prev.some((m) => m.id === newMsg.id)) return prev
             return [...prev, newMsg]
           })
+        }
+      })
+
+      // Subscribe to typing indicators
+      typingChannel = subscribeToTyping(user.id, (payload) => {
+        const { senderId, isTyping: typing } = payload as { senderId: string; isTyping: boolean }
+        if (senderId === otherUserId) {
+          setIsTyping(typing)
+          // Auto-clear typing after 3s
+          if (typing) {
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+            typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000)
+          }
         }
       })
     } else {
@@ -109,12 +286,8 @@ export function ChatView() {
       pollingInterval = setInterval(async () => {
         try {
           const res = await fetch(
-            `/api/chat?senderId=${chatSenderId}&userId=${user.id}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
+            `/api/chat?senderId=${otherUserId}&userId=${user.id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
           )
           if (res.ok) {
             const data = await res.json()
@@ -127,22 +300,50 @@ export function ChatView() {
     }
 
     return () => {
-      if (realtimeChannel) {
-        realtimeChannel.unsubscribe()
-      }
-      if (pollingInterval) {
-        clearInterval(pollingInterval)
-      }
+      if (realtimeChannel) realtimeChannel.unsubscribe()
+      if (typingChannel) typingChannel.unsubscribe()
+      if (pollingInterval) clearInterval(pollingInterval)
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     }
-  }, [user, chatSenderId, token])
+  }, [user, otherUserId, token, t])
 
   // Auto-scroll on new messages
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
 
+  // Mark messages as read
+  useEffect(() => {
+    if (!user || !otherUserId || messages.length === 0) return
+    const unreadMessages = messages.filter(
+      (m) => m.senderId === otherUserId && !m.read
+    )
+    if (unreadMessages.length > 0) {
+      fetch('/api/chat', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: 'mark_read',
+          senderId: otherUserId,
+          receiverId: user.id,
+        }),
+      }).catch(() => {})
+    }
+  }, [messages, user, otherUserId, token])
+
+  // Broadcast typing
+  const handleInputChange = (value: string) => {
+    setNewMessage(value)
+    if (isSupabaseConfigured() && user && otherUserId) {
+      broadcastTyping(user.id, otherUserId, value.length > 0)
+    }
+  }
+
   const handleSend = async () => {
-    if (!newMessage.trim() || !user || !chatSenderId || sending) return
+    if (!newMessage.trim() || !user || !otherUserId || sending) return
 
     const sanitized = sanitizeInput(newMessage)
     if (!sanitized) return
@@ -157,7 +358,7 @@ export function ChatView() {
         },
         body: JSON.stringify({
           senderId: user.id,
-          receiverId: chatSenderId,
+          receiverId: otherUserId,
           message: sanitized,
         }),
       })
@@ -166,12 +367,16 @@ export function ChatView() {
 
       const data = await res.json()
       setMessages((prev) => {
-        // Avoid duplicates
         if (prev.some((m) => m.id === data.message.id)) return prev
         return [...prev, data.message]
       })
       setNewMessage('')
       inputRef.current?.focus()
+
+      // Clear typing indicator
+      if (isSupabaseConfigured() && user) {
+        broadcastTyping(user.id, otherUserId, false)
+      }
     } catch {
       setError(t('failedSendMessage'))
       setTimeout(() => setError(null), 3000)
@@ -187,72 +392,68 @@ export function ChatView() {
     }
   }
 
-  // Not logged in
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 bg-background">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <div
-            className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(255, 215, 0, 0.1)' }}
-          >
-            <svg
-              width="36"
-              height="36"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#FFD700"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-          </div>
-          <h2 className="text-lg font-bold text-foreground">
-            {t('pleaseSignIn')}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('needLoginToChat')}
-          </p>
-        </motion.div>
-      </div>
-    )
-  }
+  const displayName = otherUserId === 'admin'
+    ? t('customerSupport')
+    : (otherUser?.name || otherUserId.slice(-8).toUpperCase())
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
       className="flex flex-col h-[calc(100vh-7rem)] bg-background"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#FFD700]/20 flex items-center justify-center">
-            <span className="text-[#FFD700] font-bold text-sm">
-              {chatSenderId === 'admin' ? 'CS' : (chatSenderId ? chatSenderId[0]?.toUpperCase() : 'S')}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-foreground">
-              {chatSenderId === 'admin'
-                ? t('customerSupport')
-                : t('sellerChat')}
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              {chatSenderId === 'admin'
-                ? t('replyWithinMinutes')
-                : (chatSenderId ? `ID: ${chatSenderId.slice(-8).toUpperCase()}` : t('noSellerSelected'))}
-            </p>
-          </div>
-        </div>
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
         <button
-          onClick={goBack}
+          onClick={onBack}
+          className="p-1.5 rounded-lg hover:bg-[#FFD700]/10 transition-colors text-foreground"
+          aria-label="Back to conversations"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+
+        {/* Avatar */}
+        <div className="relative">
+          {otherUser?.avatar ? (
+            <img
+              src={otherUser.avatar}
+              alt={displayName}
+              className="w-10 h-10 rounded-full object-cover border border-border"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-[#FFD700]/20 flex items-center justify-center">
+              <span className="text-[#FFD700] font-bold text-sm">
+                {otherUserId === 'admin' ? 'CS' : (displayName[0]?.toUpperCase() || 'U')}
+              </span>
+            </div>
+          )}
+          {isOtherOnline && (
+            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-card" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h2 className="text-sm font-bold text-foreground truncate">{displayName}</h2>
+          <p className="text-xs text-muted-foreground">
+            {isTyping ? (
+              <span className="text-[#FFD700] flex items-center gap-1">
+                typing
+                <span className="inline-flex gap-0.5">
+                  <span className="w-1 h-1 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1 h-1 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1 h-1 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
+              </span>
+            ) : isOtherOnline ? (
+              <span className="text-green-500">Online</span>
+            ) : (
+              t('replyWithinMinutes')
+            )}
+          </p>
+        </div>
+
+        <button
+          onClick={onBack}
           className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#FFD700]/10 transition-colors"
           aria-label="Close chat"
         >
@@ -284,28 +485,17 @@ export function ChatView() {
                   className="w-16 h-16 rounded-full flex items-center justify-center mb-3"
                   style={{ backgroundColor: 'rgba(255, 215, 0, 0.08)' }}
                 >
-                  <svg
-                    width="28"
-                    height="28"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#FFD700"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {t('noMessages')}
-                </p>
+                <p className="text-sm text-muted-foreground">{t('noMessages')}</p>
               </div>
             ) : (
               <div className="space-y-3">
                 <AnimatePresence initial={false}>
                   {messages.map((msg) => {
-                    const isMe = msg.senderId === user.id
+                    const isMe = msg.senderId === user?.id
                     return (
                       <motion.div
                         key={msg.id}
@@ -315,19 +505,19 @@ export function ChatView() {
                         transition={{ duration: 0.2 }}
                         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                       >
-                        {/* Sender name */}
-                        {!isMe && (
-                          <span className="text-xs text-[#FFD700] font-medium mb-0.5 ml-1">
-                            {msg.senderType === 'admin'
-                              ? t('support')
-                              : (msg.senderName || t('seller'))}
-                          </span>
-                        )}
-                        {isMe && (
-                          <span className="text-xs text-muted-foreground font-medium mb-0.5 mr-1">
-                            {t('you')}
-                          </span>
-                        )}
+                        {/* Sender info */}
+                        <div className={`flex items-center gap-2 mb-0.5 ${isMe ? 'flex-row-reverse' : ''}`}>
+                          {!isMe && (
+                            <span className="text-xs text-[#FFD700] font-medium ml-1">
+                              {msg.senderType === 'admin' ? t('support') : (msg.senderName || t('seller'))}
+                            </span>
+                          )}
+                          {isMe && (
+                            <span className="text-xs text-muted-foreground font-medium mr-1">
+                              {t('you')}
+                            </span>
+                          )}
+                        </div>
                         {/* Message bubble */}
                         <div
                           className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
@@ -336,20 +526,44 @@ export function ChatView() {
                               : 'bg-card border border-border text-foreground rounded-bl-md'
                           }`}
                         >
-                          <p>{msg.message}</p>
+                          <p className="break-words">{msg.message}</p>
                         </div>
-                        {/* Time */}
-                        <span
-                          className={`text-[10px] text-muted-foreground mt-0.5 ${
-                            isMe ? 'mr-1' : 'ml-1'
-                          }`}
-                        >
-                          {formatTime(msg.createdAt)}
-                        </span>
+                        {/* Time + read status */}
+                        <div className={`flex items-center gap-1 mt-0.5 ${isMe ? 'mr-1' : 'ml-1'}`}>
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatTime(msg.createdAt)}
+                          </span>
+                          {isMe && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {msg.read ? '✓✓' : '✓'}
+                            </span>
+                          )}
+                        </div>
                       </motion.div>
                     )
                   })}
                 </AnimatePresence>
+
+                {/* Typing indicator */}
+                <AnimatePresence>
+                  {isTyping && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 5 }}
+                      className="flex items-start"
+                    >
+                      <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-[#FFD700] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div ref={messagesEndRef} />
               </div>
             )}
@@ -373,15 +587,15 @@ export function ChatView() {
             ref={inputRef}
             type="text"
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('typeMessage')}
-            disabled={sending || !chatSenderId}
+            disabled={sending}
             className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700] disabled:opacity-50"
           />
           <button
             onClick={handleSend}
-            disabled={sending || !newMessage.trim() || !chatSenderId}
+            disabled={sending || !newMessage.trim()}
             className="w-10 h-10 rounded-xl bg-[#FFD700] flex items-center justify-center text-[#0A0A0A] disabled:opacity-40 hover:bg-[#FFE44D] transition-colors active:scale-95"
             aria-label="Send message"
           >
@@ -393,6 +607,144 @@ export function ChatView() {
           </button>
         </div>
       </div>
+    </motion.div>
+  )
+}
+
+// ─── Main Chat View ────────────────────────────────────────────────────────
+export function ChatView() {
+  const { user, token } = useAuthStore()
+  const { chatSenderId, goBack } = useNavStore()
+  const { t } = useLangStore()
+
+  const [activeChatUserId, setActiveChatUserId] = useState<string | null>(chatSenderId || null)
+  const [conversations, setConversations] = useState<ChatConversation[]>([])
+  const [conversationsLoading, setConversationsLoading] = useState(true)
+
+  // Fetch conversations list
+  useEffect(() => {
+    if (!user) {
+      setConversationsLoading(false)
+      return
+    }
+
+    const fetchConversations = async () => {
+      setConversationsLoading(true)
+      try {
+        const res = await fetch(`/api/chat?action=conversations&userId=${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setConversations(data.conversations || [])
+        }
+      } catch {
+        // Use fallback
+      } finally {
+        setConversationsLoading(false)
+      }
+    }
+
+    fetchConversations()
+  }, [user, token])
+
+  // If chatSenderId is provided from nav, open that chat directly
+  useEffect(() => {
+    if (chatSenderId) {
+      setActiveChatUserId(chatSenderId)
+    }
+  }, [chatSenderId])
+
+  const handleSelectConversation = (userId: string) => {
+    setActiveChatUserId(userId)
+  }
+
+  const handleBackToList = () => {
+    setActiveChatUserId(null)
+    // Refresh conversations when going back
+    if (user) {
+      fetch(`/api/chat?action=conversations&userId=${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => setConversations(data.conversations || []))
+        .catch(() => {})
+    }
+  }
+
+  // Not logged in
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 bg-background">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div
+            className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(255, 215, 0, 0.1)' }}
+          >
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-bold text-foreground">{t('pleaseSignIn')}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t('needLoginToChat')}</p>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // Active chat room
+  if (activeChatUserId) {
+    return <ChatRoom otherUserId={activeChatUserId} onBack={handleBackToList} />
+  }
+
+  // Conversation list
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col h-[calc(100vh-7rem)] bg-background"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={goBack}
+            className="p-1.5 rounded-lg hover:bg-[#FFD700]/10 transition-colors text-foreground"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-lg font-bold text-foreground">{t('chat')}</h2>
+        </div>
+        <button
+          onClick={() => setActiveChatUserId('admin')}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#FFD700] text-[#0A0A0A] hover:bg-[#FFE44D] transition-colors"
+        >
+          {t('contactSupport')}
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="px-4 py-3 border-b border-border">
+        <input
+          type="text"
+          placeholder={t('searchProducts')}
+          className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700]"
+        />
+      </div>
+
+      {/* Conversation List */}
+      <ScrollArea className="flex-1">
+        <ConversationList
+          conversations={conversations}
+          onSelect={handleSelectConversation}
+          loading={conversationsLoading}
+        />
+      </ScrollArea>
     </motion.div>
   )
 }
