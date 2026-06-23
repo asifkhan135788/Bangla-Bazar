@@ -1,22 +1,23 @@
 import type { Metadata } from "next";
-import { Tinos, Anek_Bangla } from "next/font/google";
+import { Playfair_Display, Poppins } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 
-// Tai Heritage Pro (serif) for English headings
-const tinos = Tinos({
-  variable: "--font-tinos",
+// Playfair Display — elegant serif for headings/display text
+const playfair = Playfair_Display({
+  variable: "--font-heading",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
 
-// Anek Bangla for Bengali text
-const anekBangla = Anek_Bangla({
-  variable: "--font-anek-bangla",
-  subsets: ["bengali", "latin"],
+// Poppins — clean sans-serif for body/normal text
+const poppins = Poppins({
+  variable: "--font-body",
+  subsets: ["latin", "latin-ext"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -98,7 +99,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="dark">
       <body
-        className={`${tinos.variable} ${anekBangla.variable} antialiased bg-background text-foreground`}
+        className={`${playfair.variable} ${poppins.variable} antialiased bg-background text-foreground`}
         suppressHydrationWarning
       >
         <ThemeProvider
