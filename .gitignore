@@ -1,3 +1,48 @@
-skills/
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+
+# Production
+build/
+
+# Environment files
+.env
+.env*.local
+.env.production
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Uploads (local)
 upload/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent/tool artifacts
+tool-results/
+worklog.md
+skills/
+agent-ctx/
