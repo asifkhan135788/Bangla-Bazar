@@ -274,7 +274,7 @@ CREATE INDEX IF NOT EXISTS "admin_sessions_expiresAt_idx" ON "admin_sessions" ("
 CREATE TABLE IF NOT EXISTS "chat_messages" (
   "id"         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),   -- @id @default(uuid()) @db.Uuid
   "senderId"   UUID         NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,     -- onDelete: Cascade
-  "receiverId" UUID,                                                   -- 🔑 Changed: TEXT → UUID (FK to users.id for proper RLS)
+  "receiverId" UUID REFERENCES "users"("id") ON DELETE CASCADE,          -- 🔑 FK to users.id (onDelete: Cascade)
   "productId"  UUID         REFERENCES "products"("id") ON DELETE CASCADE,           -- onDelete: Cascade
   "message"    TEXT         NOT NULL,                                  -- @db.Text
   "senderType" "SenderType" NOT NULL DEFAULT 'customer',              -- @default(customer)
@@ -353,6 +353,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS "on_auth_user_created" ON auth.users;
 CREATE TRIGGER "on_auth_user_created"
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION "public_handle_new_user"();
@@ -663,34 +664,32 @@ CREATE POLICY "chat_messages_auth_read_own" ON "chat_messages"
 CREATE POLICY "chat_messages_auth_insert" ON "chat_messages"
   FOR INSERT WITH CHECK (auth.uid() = "senderId" AND "is_not_banned"());
 
--- 🔑 FIX #1: Sender এবং Receiver update আলাদা করা হয়েছে
+-- 🔑 FIX #1: RLS recursion-free update policies
 --
--- নিয়ম:
---   ✅ Sender: শুধু message content edit করতে পারে (message column only)
---   ✅ Receiver: শুধু "read" status update করতে পারে (read column only)
---   ❌ Receiver: message content edit করতে পারে না
---   ❌ Sender: read status change করতে পারে না
---   ✅ Admin: সবকিছু করতে পারে (আলাদা policy)
+-- আগের সমস্যা: একই table (chat_messages) এ subquery করলে
+-- RLS recursion / permission issue হতো।
+--
+-- সমাধান: RLS শুধু row-level access control করবে।
+-- Column-level restriction (message edit vs read status)
+-- API/backend validation এ handled হবে।
+--
+-- RLS নিয়ম (recursion-free):
+--   ✅ Sender: নিজের message row update করতে পারে
+--   ✅ Receiver: নিজের message row update করতে পারে
+--   ✅ Admin: সব message update করতে পারে
+--   ❌ Column-level guard → API routes এ enforce করুন:
+--      - Sender শুধু message column edit করতে পারে (read নয়)
+--      - Receiver শুধু read column edit করতে পারে (message নয়)
 
--- Sender: নিজের message edit করা (শুধু message column change হতে পারে)
+-- Sender: নিজের message update (column restriction → API layer)
 CREATE POLICY "chat_messages_auth_sender_update" ON "chat_messages"
   FOR UPDATE USING (auth.uid() = "senderId")
-  WITH CHECK (
-    auth.uid() = "senderId"
-    -- read status sender change করতে পারে না
-    AND "read" = (SELECT "read" FROM "chat_messages" WHERE "id" = "chat_messages"."id")
-  );
+  WITH CHECK (auth.uid() = "senderId");
 
--- Receiver: শুধু read status update করা (message content change করতে পারে না)
+-- Receiver: নিজের received message update (column restriction → API layer)
 CREATE POLICY "chat_messages_auth_receiver_update_read" ON "chat_messages"
   FOR UPDATE USING (auth.uid() = "receiverId")
-  WITH CHECK (
-    auth.uid() = "receiverId"
-    -- message content receiver change করতে পারে না
-    AND "message" = (SELECT "message" FROM "chat_messages" WHERE "id" = "chat_messages"."id")
-    -- senderId change করতে পারে না
-    AND "senderId" = (SELECT "senderId" FROM "chat_messages" WHERE "id" = "chat_messages"."id")
-  );
+  WITH CHECK (auth.uid() = "receiverId");
 
 -- admin: সব message এ full access
 CREATE POLICY "chat_messages_auth_admin_all" ON "chat_messages"
@@ -749,63 +748,9 @@ GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 
 -- ────────────────────────────────────────────────────────────
--- 5.2 Function permissions
+-- 5.2 🔑 FIX #4: Admin action functions — শুধু service_role দিয়ে callable
+--     Functions আগে তৈরি করুন, তারপর permissions সেট করুন
 -- ────────────────────────────────────────────────────────────
-GRANT EXECUTE ON FUNCTION "is_admin"() TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION "is_not_banned"() TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION "update_updated_at_column"() TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION "public_handle_new_user"() TO anon, authenticated, service_role;
-
--- 🔑 FIX #4: Admin action functions — শুধু service_role execute করতে পারে
--- Client-side (anon/authenticated) থেকে direct call ব্লক
-REVOKE ALL ON FUNCTION "admin_set_user_role"(UUID, "UserRole") FROM anon, authenticated;
-GRANT EXECUTE ON FUNCTION "admin_set_user_role"(UUID, "UserRole") TO service_role;
-
-REVOKE ALL ON FUNCTION "admin_set_user_banned"(UUID, BOOLEAN, TIMESTAMPTZ) FROM anon, authenticated;
-GRANT EXECUTE ON FUNCTION "admin_set_user_banned"(UUID, BOOLEAN, TIMESTAMPTZ) TO service_role;
-
-REVOKE ALL ON FUNCTION "admin_update_setting"(TEXT, JSONB) FROM anon, authenticated;
-GRANT EXECUTE ON FUNCTION "admin_update_setting"(TEXT, JSONB) TO service_role;
-
--- Email sync trigger function: শুধু auth system ব্যবহার করে
-REVOKE ALL ON FUNCTION "sync_user_email"() FROM anon, authenticated;
-GRANT EXECUTE ON FUNCTION "sync_user_email"() TO service_role;
-
--- ────────────────────────────────────────────────────────────
--- 5.3 Supabase Realtime সক্রিয় করা
--- ────────────────────────────────────────────────────────────
-ALTER PUBLICATION supabase_realtime ADD TABLE "chat_messages";
-ALTER PUBLICATION supabase_realtime ADD TABLE "orders";
-
--- ────────────────────────────────────────────────────────────
--- 5.4 🔑 FIX #6: Supabase Auth compatible admin setup
---
--- পুরানো পদ্ধতি (বাদ):
---   INSERT INTO users (email, password, role) VALUES (...)
---
--- নতুন পদ্ধতি (Supabase Auth):
---   1. auth.users এ admin তৈরি করুন (Supabase Dashboard থেকে)
---   2. on_auth_user_created trigger স্বয়ংক্রিয়ভাবে public.users এ row তৈরি করবে
---   3. তারপর role admin করুন
---
--- নিচে Step-by-step দেওয়া হলো:
--- ────────────────────────────────────────────────────────────
-
--- STEP A: Supabase Dashboard → Authentication → Users → Add User
---   Email: admin@banglabazar.com
---   Password: (আপনার শক্তিশালী পাসওয়ার্ড দিন)
---   Auto Confirm: ✅ ON
---
--- STEP B: তৈরি হওয়া user-এর role admin করুন:
---   (নিচের query রান করুন user তৈরি হওয়ার পর)
-
--- UPDATE "users" SET "role" = 'admin' WHERE "email" = 'admin@banglabazar.com';
-
--- STEP C (optional): যদি আগে থেকেই admin user থাকে এবং
--- আপনি SQL দিয়ে তৈরি করতে চান, তাহলে নিচের function ব্যবহার করুন:
-
--- 🔑 FIX #4: Admin action functions — শুধু service_role দিয়ে callable
--- এগুলো client-side থেকে direct call করা যাবে না
 
 -- Admin role change (শুধু service_role ব্যবহার করে API route থেকে call করুন)
 CREATE OR REPLACE FUNCTION "admin_set_user_role"(
@@ -818,7 +763,6 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- শুধু admin user-ই এটা call করতে পারে
   IF NOT "is_admin"() THEN
     RAISE EXCEPTION 'Permission denied: admin only';
   END IF;
@@ -881,11 +825,69 @@ BEGIN
 END;
 $$;
 
+-- ────────────────────────────────────────────────────────────
+-- 5.3 Function permissions (সব function তৈরির পর)
+-- ────────────────────────────────────────────────────────────
+GRANT EXECUTE ON FUNCTION "is_admin"() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION "is_not_banned"() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION "update_updated_at_column"() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION "public_handle_new_user"() TO anon, authenticated, service_role;
+
+-- Admin action functions — শুধু service_role execute করতে পারে
+-- Client-side (anon/authenticated) থেকে direct call ব্লক
+REVOKE ALL ON FUNCTION "admin_set_user_role"(UUID, "UserRole") FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION "admin_set_user_role"(UUID, "UserRole") TO service_role;
+
+REVOKE ALL ON FUNCTION "admin_set_user_banned"(UUID, BOOLEAN, TIMESTAMPTZ) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION "admin_set_user_banned"(UUID, BOOLEAN, TIMESTAMPTZ) TO service_role;
+
+REVOKE ALL ON FUNCTION "admin_update_setting"(TEXT, JSONB) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION "admin_update_setting"(TEXT, JSONB) TO service_role;
+
+-- Email sync trigger function: শুধু auth system ব্যবহার করে
+REVOKE ALL ON FUNCTION "sync_user_email"() FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION "sync_user_email"() TO service_role;
+
+-- ────────────────────────────────────────────────────────────
+-- 5.4 Supabase Realtime সক্রিয় করা
+-- ────────────────────────────────────────────────────────────
+ALTER PUBLICATION supabase_realtime ADD TABLE "chat_messages";
+ALTER PUBLICATION supabase_realtime ADD TABLE "orders";
+
+-- ────────────────────────────────────────────────────────────
+-- 5.5 Idempotent triggers on auth.users
+-- 🔑 FIX #3: DROP TRIGGER IF EXISTS → CREATE TRIGGER
+-- ────────────────────────────────────────────────────────────
+DROP TRIGGER IF EXISTS "on_auth_user_email_changed" ON auth.users;
 CREATE TRIGGER "on_auth_user_email_changed"
   AFTER UPDATE OF email ON auth.users
   FOR EACH ROW
   WHEN (OLD.email IS DISTINCT FROM NEW.email)
   EXECUTE FUNCTION "sync_user_email"();
+
+-- ────────────────────────────────────────────────────────────
+-- 5.6 Supabase Auth compatible admin setup
+--
+-- পুরানো পদ্ধতি (বাদ):
+--   INSERT INTO users (email, password, role) VALUES (...)
+--
+-- নতুন পদ্ধতি (Supabase Auth):
+--   1. auth.users এ admin তৈরি করুন (Supabase Dashboard থেকে)
+--   2. on_auth_user_created trigger স্বয়ংক্রিয়ভাবে public.users এ row তৈরি করবে
+--   3. তারপর role admin করুন
+--
+-- নিচে Step-by-step দেওয়া হলো:
+-- ────────────────────────────────────────────────────────────
+
+-- STEP A: Supabase Dashboard → Authentication → Users → Add User
+--   Email: admin@banglabazar.com
+--   Password: (আপনার শক্তিশালী পাসওয়ার্ড দিন)
+--   Auto Confirm: ✅ ON
+--
+-- STEP B: তৈরি হওয়া user-এর role admin করুন:
+--   (নিচের query রান করুন user তৈরি হওয়ার পর)
+
+-- UPDATE "users" SET "role" = 'admin' WHERE "email" = 'admin@banglabazar.com';
 
 
 -- ╔══════════════════════════════════════════════════════════╗

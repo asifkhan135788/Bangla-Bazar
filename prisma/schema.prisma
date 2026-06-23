@@ -54,7 +54,8 @@ model User {
   logs          UserLog[]
   reviews       Review[]
   adminSessions AdminSession[]
-  sentMessages  ChatMessage[] @relation("SentMessages")
+  sentMessages    ChatMessage[] @relation("SentMessages")
+  receivedMessages ChatMessage[] @relation("ReceivedMessages")
 
   @@index([email])
   @@index([role])
@@ -235,6 +236,7 @@ model ChatMessage {
   createdAt  DateTime   @default(now()) @db.Timestamptz()
 
   sender     User       @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User?      @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   product    Product?   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([senderId])
