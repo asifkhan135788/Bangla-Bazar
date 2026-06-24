@@ -27,8 +27,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Uploads (local)
-upload/
+# Uploads (local file storage only, NOT API routes)
+/public/upload/
 
 # IDE
 .vscode/
