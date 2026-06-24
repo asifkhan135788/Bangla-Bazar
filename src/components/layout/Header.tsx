@@ -48,11 +48,12 @@ export default function Header() {
           className="flex items-center gap-2.5"
           aria-label="Go to home"
         >
-          <span
-            className="flex items-center justify-center w-10 h-10 rounded-lg text-xs font-black border-[3px] border-foreground shadow-[3px_3px_0_0_var(--foreground)] bg-[#FFD700] text-[#0A0A0A] transition-transform hover:rotate-[-3deg]"
-          >
-            BB
-          </span>
+          <img
+  src="/images/logo.svg"
+  alt="Bangla Bazar"
+  className="w-10 h-10 object-contain transition-transform hover:rotate-[-3deg]"
+/>
+            
           <span className="text-xl font-heading font-black tracking-tight">
             <span className="text-[#22C55E]">Bangla</span>{' '}
             <span className="text-[#FFD700]">Bazar</span>
