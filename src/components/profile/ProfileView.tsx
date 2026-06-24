@@ -172,12 +172,23 @@ export function ProfileView() {
         body: formData,
       })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Upload failed')
+      // Safely parse response - handle HTML error pages
+      let data: any
+      const contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        data = await res.json()
+      } else {
+        // Response is not JSON (likely HTML error page)
+        if (!res.ok) {
+          throw new Error(language === 'en' ? 'Upload failed. Please try again.' : 'আপলোড ব্যর্থ। আবার চেষ্টা করুন।')
+        }
+        throw new Error(language === 'en' ? 'Unexpected server response' : 'অপ্রত্যাশিত সার্ভার রেসপন্স')
       }
 
-      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data?.error || 'Upload failed')
+      }
+
       updateUser({ avatar: data.avatarUrl })
       toast.success(language === 'en' ? 'Profile picture updated!' : 'প্রোফাইল ছবি আপডেট হয়েছে!')
     } catch (error) {

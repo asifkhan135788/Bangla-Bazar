@@ -1,8 +1,21 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSecurityHeaders, validateAdminAccess } from '@/lib/security'
+import { toNumber } from '@/lib/utils'
 
 const headers = { ...getSecurityHeaders(), 'Content-Type': 'application/json' }
+
+function serializeProduct(product: Record<string, unknown>) {
+  return {
+    ...product,
+    price: toNumber(product.price),
+    salePrice: product.salePrice != null ? toNumber(product.salePrice) : null,
+    deliveryCharge: product.deliveryCharge != null ? toNumber(product.deliveryCharge) : null,
+    rating: toNumber(product.rating),
+    buyCount: toNumber(product.buyCount ?? 0),
+    reviewCount: toNumber(product.reviewCount ?? 0),
+  }
+}
 
 export async function GET(request: Request) {
   try {
@@ -60,8 +73,10 @@ export async function GET(request: Request) {
       db.product.count({ where }),
     ])
 
+    const serializedProducts = products.map((p) => serializeProduct(p as unknown as Record<string, unknown>))
+
     return NextResponse.json(
-      { products, total, page, totalPages: Math.ceil(total / limit) },
+      { products: serializedProducts, total, page, totalPages: Math.ceil(total / limit) },
       { status: 200, headers }
     )
   } catch (error) {

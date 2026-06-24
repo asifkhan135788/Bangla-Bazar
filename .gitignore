@@ -46,3 +46,4 @@ tool-results/
 worklog.md
 skills/
 agent-ctx/
+db/*.db

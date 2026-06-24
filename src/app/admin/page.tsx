@@ -67,6 +67,7 @@ interface Product {
   descriptionBN: string | null
   price: number
   salePrice: number | null
+  deliveryCharge: number | null
   category: string
   images: string
   stock: number
@@ -109,6 +110,8 @@ interface UserItem {
   phone: string | null
   role: string
   avatar: string | null
+  banned: boolean
+  bannedUntil: string | null
   createdAt: string
   _count?: { orders: number }
 }
@@ -313,6 +316,50 @@ function ChatIcon({ className = 'w-5 h-5' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
+function SendIcon({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  )
+}
+
+function DownloadIcon({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  )
+}
+
+function ShieldIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  )
+}
+
+function PhoneIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  )
+}
+
+function UnlockIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
     </svg>
   )
 }
@@ -606,6 +653,7 @@ function ProductsView({ token }: { token: string }) {
   const [formDescBN, setFormDescBN] = useState('')
   const [formPrice, setFormPrice] = useState('')
   const [formSalePrice, setFormSalePrice] = useState('')
+  const [formDeliveryCharge, setFormDeliveryCharge] = useState('')
   const [formCategory, setFormCategory] = useState('')
   const [formStock, setFormStock] = useState('0')
   const [formSku, setFormSku] = useState('')
@@ -653,6 +701,7 @@ function ProductsView({ token }: { token: string }) {
     setFormDescBN('')
     setFormPrice('')
     setFormSalePrice('')
+    setFormDeliveryCharge('')
     setFormCategory('')
     setFormStock('0')
     setFormSku('')
@@ -678,6 +727,7 @@ function ProductsView({ token }: { token: string }) {
     setFormDescBN(product.descriptionBN || '')
     setFormPrice(product.price.toString())
     setFormSalePrice(product.salePrice?.toString() || '')
+    setFormDeliveryCharge(product.deliveryCharge?.toString() || '')
     setFormCategory(product.category)
     setFormStock(product.stock.toString())
     setFormSku(product.sku || '')
@@ -761,6 +811,7 @@ function ProductsView({ token }: { token: string }) {
         descriptionBN: formDescBN.trim() ? sanitize(formDescBN.trim()) : undefined,
         price: parseFloat(formPrice),
         salePrice: formSalePrice ? parseFloat(formSalePrice) : null,
+        deliveryCharge: formDeliveryCharge ? parseFloat(formDeliveryCharge) : null,
         category: formCategory,
         stock: parseInt(formStock) || 0,
         sku: formSku.trim() ? sanitize(formSku.trim()) : undefined,
@@ -1016,6 +1067,10 @@ function ProductsView({ token }: { token: string }) {
             <div className="space-y-2">
               <Label className="text-white">Sale Price (৳)</Label>
               <Input type="number" value={formSalePrice} onChange={(e) => setFormSalePrice(e.target.value)} placeholder="0" min="0" step="0.01" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white">Delivery Charge (৳)</Label>
+              <Input type="number" value={formDeliveryCharge} onChange={(e) => setFormDeliveryCharge(e.target.value)} placeholder="0 = free delivery" min="0" step="0.01" className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500" />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Category *</Label>
@@ -1605,6 +1660,14 @@ function UsersView({ token }: { token: string }) {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [search, setSearch] = useState('')
+  const [banDialogUser, setBanDialogUser] = useState<UserItem | null>(null)
+  const [banDays, setBanDays] = useState('30')
+  const [banReason, setBanReason] = useState('')
+  const [banLoading, setBanLoading] = useState(false)
+  const [phoneDialogUser, setPhoneDialogUser] = useState<UserItem | null>(null)
+  const [phoneInput, setPhoneInput] = useState('')
+  const [phoneLoading, setPhoneLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -1624,6 +1687,73 @@ function UsersView({ token }: { token: string }) {
   useEffect(() => {
     fetchUsers()
   }, [fetchUsers])
+
+  const handleBan = async () => {
+    if (!banDialogUser) return
+    setBanLoading(true)
+    try {
+      const isPermanent = banDays === '0'
+      const body = isPermanent
+        ? { userId: banDialogUser.id, action: 'permanent_ban', banReason: banReason.trim() || undefined }
+        : { userId: banDialogUser.id, action: 'ban', banDays: parseInt(banDays), banReason: banReason.trim() || undefined }
+      const res = await adminFetch('/api/admin/users', token, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        setBanDialogUser(null)
+        setBanDays('30')
+        setBanReason('')
+        fetchUsers()
+      }
+    } catch {
+      // handled
+    } finally {
+      setBanLoading(false)
+    }
+  }
+
+  const handleUnban = async (userId: string) => {
+    setActionLoading(userId)
+    try {
+      const res = await adminFetch('/api/admin/users', token, {
+        method: 'PUT',
+        body: JSON.stringify({ userId, action: 'unban' }),
+      })
+      if (res.ok) {
+        fetchUsers()
+      }
+    } catch {
+      // handled
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handlePhoneUpdate = async () => {
+    if (!phoneDialogUser) return
+    setPhoneLoading(true)
+    try {
+      const res = await adminFetch('/api/admin/users', token, {
+        method: 'PUT',
+        body: JSON.stringify({ userId: phoneDialogUser.id, action: 'update_phone', phone: phoneInput.trim() }),
+      })
+      if (res.ok) {
+        setPhoneDialogUser(null)
+        setPhoneInput('')
+        fetchUsers()
+      }
+    } catch {
+      // handled
+    } finally {
+      setPhoneLoading(false)
+    }
+  }
+
+  const openPhoneDialog = (user: UserItem) => {
+    setPhoneDialogUser(user)
+    setPhoneInput(user.phone || '')
+  }
 
   if (loading) {
     return (
@@ -1659,14 +1789,15 @@ function UsersView({ token }: { token: string }) {
               <TableHead className="text-gray-400 font-bold">Email</TableHead>
               <TableHead className="text-gray-400 font-bold">Phone</TableHead>
               <TableHead className="text-gray-400 font-bold">Role</TableHead>
+              <TableHead className="text-gray-400 font-bold">Banned</TableHead>
               <TableHead className="text-gray-400 font-bold">Orders</TableHead>
-              <TableHead className="text-gray-400 font-bold">Joined</TableHead>
+              <TableHead className="text-gray-400 font-bold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500 py-8">No users found</TableCell>
+                <TableCell colSpan={7} className="text-center text-gray-500 py-8">No users found</TableCell>
               </TableRow>
             ) : (
               users.map((user) => (
@@ -1682,12 +1813,59 @@ function UsersView({ token }: { token: string }) {
                   <TableCell className="text-gray-300">{user.email}</TableCell>
                   <TableCell className="text-gray-300">{user.phone || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={user.role === 'admin' ? 'nb-badge bg-[#FFD700]/20 text-[#FFD700]' : 'nb-badge bg-gray-800 text-gray-400'}>
+                    <Badge variant="outline" className={user.role === 'admin' ? 'nb-badge bg-[#FFD700]/20 text-[#FFD700]' : user.role === 'banned' ? 'nb-badge bg-red-900/40 text-red-400' : 'nb-badge bg-gray-800 text-gray-400'}>
                       {user.role}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    {user.banned ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border-[2px] border-[#EF4444] bg-[#EF4444]/20 text-[#EF4444]">
+                        {user.bannedUntil ? `Until ${new Date(user.bannedUntil).toLocaleDateString()}` : 'Permanent'}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 text-xs">No</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-gray-300">{user._count?.orders ?? 0}</TableCell>
-                  <TableCell className="text-xs text-gray-500">{formatDate(user.createdAt)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {user.banned ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleUnban(user.id)}
+                          disabled={actionLoading === user.id}
+                          title="Unban user"
+                          className="hover:bg-[#22C55E]/20"
+                        >
+                          {actionLoading === user.id ? (
+                            <div className="w-4 h-4 border-2 border-gray-600 rounded-full animate-spin" style={{ borderTopColor: '#22C55E' }} />
+                          ) : (
+                            <UnlockIcon className="w-4 h-4 text-[#22C55E]" />
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setBanDialogUser(user)}
+                          title="Ban user"
+                          className="hover:bg-[#EF4444]/20"
+                        >
+                          <ShieldIcon className="w-4 h-4 text-[#EF4444]" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openPhoneDialog(user)}
+                        title="Edit phone number"
+                        className="hover:bg-[#FFD700]/20"
+                      >
+                        <PhoneIcon className="w-4 h-4 text-[#FFD700]" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -1708,6 +1886,86 @@ function UsersView({ token }: { token: string }) {
           </div>
         )}
       </div>
+
+      {/* Ban Dialog */}
+      <Dialog open={!!banDialogUser} onOpenChange={(open) => { if (!open) { setBanDialogUser(null); setBanDays('30'); setBanReason('') } }}>
+        <DialogContent className="bg-[#1A1A1A] border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)]">
+          <DialogHeader>
+            <DialogTitle className="text-white font-black flex items-center gap-2">
+              <ShieldIcon className="w-5 h-5 text-[#EF4444]" /> Ban User
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Ban <span className="text-white font-bold">{banDialogUser?.name || banDialogUser?.email}</span> from accessing the platform.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-white font-bold">Ban Duration</Label>
+              <Select value={banDays} onValueChange={setBanDays}>
+                <SelectTrigger className="w-full nb-input bg-[#0A0A0A] border-foreground text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 Days</SelectItem>
+                  <SelectItem value="30">30 Days</SelectItem>
+                  <SelectItem value="90">90 Days</SelectItem>
+                  <SelectItem value="365">365 Days</SelectItem>
+                  <SelectItem value="0">Permanent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white font-bold">Reason</Label>
+              <Textarea
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                placeholder="Reason for ban (optional)"
+                rows={3}
+                className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setBanDialogUser(null); setBanDays('30'); setBanReason('') }} className="border-foreground/30 text-gray-300 hover:bg-[#222]">Cancel</Button>
+            <Button onClick={handleBan} disabled={banLoading} className="nb-btn bg-[#EF4444] text-white border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] disabled:opacity-50">
+              {banLoading ? 'Banning...' : 'Ban User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Phone Edit Dialog */}
+      <Dialog open={!!phoneDialogUser} onOpenChange={(open) => { if (!open) { setPhoneDialogUser(null); setPhoneInput('') } }}>
+        <DialogContent className="bg-[#1A1A1A] border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)]">
+          <DialogHeader>
+            <DialogTitle className="text-white font-black flex items-center gap-2">
+              <PhoneIcon className="w-5 h-5 text-[#FFD700]" /> Edit Phone Number
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Update phone number for <span className="text-white font-bold">{phoneDialogUser?.name || phoneDialogUser?.email}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label className="text-white font-bold">Phone Number</Label>
+            <Input
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              placeholder="01XXXXXXXXX"
+              className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPhoneDialogUser(null); setPhoneInput('') }} className="border-foreground/30 text-gray-300 hover:bg-[#222]">Cancel</Button>
+            <Button onClick={handlePhoneUpdate} disabled={phoneLoading} className="nb-btn bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] disabled:opacity-50">
+              {phoneLoading ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1723,6 +1981,7 @@ function UserLogsView({ token }: { token: string }) {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [actionFilter, setActionFilter] = useState('')
+  const [downloadingCSV, setDownloadingCSV] = useState(false)
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -1744,6 +2003,60 @@ function UserLogsView({ token }: { token: string }) {
     fetchLogs()
   }, [fetchLogs])
 
+  const downloadCSV = async () => {
+    setDownloadingCSV(true)
+    try {
+      // Fetch ALL logs (not just current page)
+      let allLogs: UserLogItem[] = []
+      let currentPage = 1
+      let hasMore = true
+
+      while (hasMore) {
+        let url = `/api/admin/user-logs?page=${currentPage}&limit=100`
+        if (actionFilter) url += `&action=${encodeURIComponent(actionFilter)}`
+        const res = await adminFetch(url, token)
+        const data = await res.json()
+        const fetchedLogs = data.logs || []
+        allLogs = [...allLogs, ...fetchedLogs]
+        hasMore = currentPage < (data.totalPages || 1)
+        currentPage++
+      }
+
+      // Build CSV
+      const headers = ['Timestamp', 'User', 'Email', 'Action', 'Details', 'IP', 'User Agent']
+      const csvRows = [headers.join(',')]
+
+      for (const log of allLogs) {
+        const row = [
+          `"${formatDate(log.createdAt)}"`,
+          `"${(log.user?.name || 'System').replace(/"/g, '""')}"`,
+          `"${(log.user?.email || '').replace(/"/g, '""')}"`,
+          `"${log.action}"`,
+          `"${(log.details || '').replace(/"/g, '""')}"`,
+          `"${log.ip || ''}"`,
+          `"${(log.userAgent || '').replace(/"/g, '""')}"`,
+        ]
+        csvRows.push(row.join(','))
+      }
+
+      const csvContent = csvRows.join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const date = new Date().toISOString().split('T')[0]
+      link.href = url
+      link.download = `user-logs-${date}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch {
+      // handled
+    } finally {
+      setDownloadingCSV(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -1759,17 +2072,27 @@ function UserLogsView({ token }: { token: string }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-2xl font-black text-white">User Logs</h2>
-        <Select value={actionFilter || 'all'} onValueChange={(v) => { setActionFilter(v === 'all' ? '' : v); setPage(1) }}>
-          <SelectTrigger className="w-44 nb-input bg-[#0A0A0A] border-foreground text-white">
-            <SelectValue placeholder="Filter by action" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Actions</SelectItem>
-            {actionTypes.map((action) => (
-              <SelectItem key={action} value={action}>{action}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={actionFilter || 'all'} onValueChange={(v) => { setActionFilter(v === 'all' ? '' : v); setPage(1) }}>
+            <SelectTrigger className="w-44 nb-input bg-[#0A0A0A] border-foreground text-white">
+              <SelectValue placeholder="Filter by action" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Actions</SelectItem>
+              {actionTypes.map((action) => (
+                <SelectItem key={action} value={action}>{action}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={downloadCSV}
+            disabled={downloadingCSV}
+            className="nb-btn bg-[#22C55E] text-white border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] disabled:opacity-50"
+          >
+            <DownloadIcon className="w-4 h-4 mr-2" />
+            {downloadingCSV ? 'Downloading...' : 'Download CSV'}
+          </Button>
+        </div>
       </div>
 
       <div className="bg-[#1A1A1A] rounded-xl border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] overflow-hidden">
@@ -2098,9 +2421,13 @@ function ChatTab({ token }: { token: string }) {
                   <button
                     onClick={handleSend}
                     disabled={sending || !newMessage.trim()}
-                    className="nb-btn-sm bg-[#FFD700] text-[#0A0A0A] disabled:opacity-40"
+                    className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] disabled:opacity-40 hover:shadow-[1px_1px_0px_var(--foreground)] hover:translate-x-[1px] hover:translate-y-[1px] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
                   >
-                    {sending ? '...' : 'SEND'}
+                    {sending ? (
+                      <div className="w-5 h-5 border-[3px] border-[#0A0A0A]/30 rounded-full animate-spin" style={{ borderTopColor: '#0A0A0A' }} />
+                    ) : (
+                      <SendIcon className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </div>

@@ -90,8 +90,9 @@ model Product {
   description   String?      @db.Text
   descriptionBN String?      @db.Text
   price         Decimal      @db.Decimal(10, 2)
-  salePrice     Decimal?     @db.Decimal(10, 2)
-  categoryId    String       @db.Uuid
+  salePrice      Decimal?     @db.Decimal(10, 2)
+  deliveryCharge  Decimal?     @db.Decimal(10, 2)
+  categoryId     String       @db.Uuid
   images        String[]     @default([])
   stock         Int          @default(0)
   featured      Boolean      @default(false)

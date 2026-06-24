@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, Loader2, ArrowLeft, ImageIcon } from 'lucide-react'
+import { X, Send, Loader2, ArrowLeft, ImageIcon, Smile, Pencil, Trash2, Check } from 'lucide-react'
 import { useAuthStore } from '@/store/auth-store'
 import { useNavStore } from '@/store/nav-store'
 import { useLangStore } from '@/store/lang-store'
@@ -73,6 +73,122 @@ function formatRelativeTime(dateStr: string): string {
   } catch {
     return ''
   }
+}
+
+// ─── Emoji Picker ────────────────────────────────────────────────────────
+const EMOJI_LIST = [
+  '😀','😂','🥰','😍','😘','😊','🤗','🤔','😢','😭',
+  '😡','👍','👎','❤️','🔥','✨','🎉','🙏','💪','👋',
+  '🤝','💯','🥳','😎','🤩','😴','🤮','🥶','🤯','🫡',
+  '😤','😈','💀','🤡','👻','👏','🤲','✅','❌','⭐',
+  '🌟','💬','📢','📌','🛍️','💰','🎁','🎊','🎈','🎯',
+  '🚀','⏰','📱','💡',
+]
+
+function EmojiPicker({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (emoji: string) => void
+  onClose: () => void
+}) {
+  const pickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [onClose])
+
+  return (
+    <div
+      ref={pickerRef}
+      className="absolute bottom-full left-0 mb-2 p-3 bg-card border-[2px] border-foreground shadow-[4px_4px_0px_var(--foreground)] rounded-lg z-50 w-72"
+    >
+      <div className="grid grid-cols-8 gap-1">
+        {EMOJI_LIST.map((emoji) => (
+          <button
+            key={emoji}
+            onClick={() => {
+              onSelect(emoji)
+              onClose()
+            }}
+            className="w-8 h-8 flex items-center justify-center text-lg hover:bg-[#FFD700]/20 rounded transition-colors active:scale-90"
+            aria-label={`Emoji ${emoji}`}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Message Context Menu ──────────────────────────────────────────────────
+function MessageContextMenu({
+  x,
+  y,
+  onEdit,
+  onDelete,
+  onClose,
+}: {
+  x: number
+  y: number
+  onEdit: () => void
+  onDelete: () => void
+  onClose: () => void
+}) {
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [onClose])
+
+  // Adjust position so menu doesn't go off-screen
+  const menuStyle: React.CSSProperties = {
+    position: 'fixed',
+    left: Math.min(x, window.innerWidth - 160),
+    top: Math.min(y, window.innerHeight - 100),
+    zIndex: 60,
+  }
+
+  return (
+    <div ref={menuRef} style={menuStyle}>
+      <div className="bg-card border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] rounded-lg overflow-hidden min-w-[140px]">
+        <button
+          onClick={() => {
+            onEdit()
+            onClose()
+          }}
+          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-foreground hover:bg-[#FFD700]/10 transition-colors"
+        >
+          <Pencil className="h-4 w-4" />
+          Edit
+        </button>
+        <div className="h-[2px] bg-foreground/20" />
+        <button
+          onClick={() => {
+            onDelete()
+            onClose()
+          }}
+          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-500/10 transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </button>
+      </div>
+    </div>
+  )
 }
 
 // ─── Conversation List View ────────────────────────────────────────────────
@@ -196,9 +312,25 @@ function ChatRoom({
   const [isTyping, setIsTyping] = useState(false)
   const [isOtherOnline, setIsOtherOnline] = useState(otherUserId === 'admin')
 
+  // Emoji picker state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+
+  // Context menu state (long-press / right-click)
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    messageId: string
+  } | null>(null)
+
+  // Inline edit state
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editInputRef = useRef<HTMLInputElement>(null)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -392,6 +524,105 @@ function ChatRoom({
     }
   }
 
+  // Emoji insert
+  const handleEmojiSelect = (emoji: string) => {
+    setNewMessage((prev) => prev + emoji)
+    inputRef.current?.focus()
+  }
+
+  // Context menu handlers
+  const handleContextMenu = (e: React.MouseEvent, messageId: string, isMe: boolean) => {
+    if (!isMe) return
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, messageId })
+  }
+
+  const handleTouchStart = (messageId: string, isMe: boolean) => {
+    if (!isMe) return
+    longPressTimerRef.current = setTimeout(() => {
+      // Use a fixed position near center for touch
+      setContextMenu({
+        x: window.innerWidth / 2 - 70,
+        y: window.innerHeight / 2 - 50,
+        messageId,
+      })
+    }, 500)
+  }
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  const handleTouchMove = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  // Delete message
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!user || !token) return
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ messageId, userId: user.id }),
+      })
+      if (res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== messageId))
+      }
+    } catch {
+      // silently fail
+    }
+  }
+
+  // Start editing a message
+  const handleStartEdit = (messageId: string, currentText: string) => {
+    setEditingMessageId(messageId)
+    setEditText(currentText)
+    setTimeout(() => editInputRef.current?.focus(), 50)
+  }
+
+  // Save edited message
+  const handleSaveEdit = async (messageId: string) => {
+    if (!user || !token) return
+    const sanitized = sanitizeInput(editText)
+    if (!sanitized) return
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ messageId, userId: user.id, message: sanitized }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? { ...m, message: data.message.message } : m))
+        )
+      }
+    } catch {
+      // silently fail
+    }
+    setEditingMessageId(null)
+    setEditText('')
+  }
+
+  // Cancel edit
+  const handleCancelEdit = () => {
+    setEditingMessageId(null)
+    setEditText('')
+  }
+
   const displayName = otherUserId === 'admin'
     ? t('customerSupport')
     : (otherUser?.name || otherUserId.slice(-8).toUpperCase())
@@ -503,6 +734,10 @@ function ChatRoom({
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
                         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                        onContextMenu={(e) => handleContextMenu(e, msg.id, isMe)}
+                        onTouchStart={() => handleTouchStart(msg.id, isMe)}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchMove={handleTouchMove}
                       >
                         {/* Sender info */}
                         <div className={`flex items-center gap-2 mb-0.5 ${isMe ? 'flex-row-reverse' : ''}`}>
@@ -523,9 +758,44 @@ function ChatRoom({
                             isMe
                               ? 'bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
                               : 'bg-card text-foreground border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
-                          }`}
+                          } ${isMe ? 'cursor-pointer select-none' : ''}`}
                         >
-                          <p className="break-words">{msg.message}</p>
+                          {editingMessageId === msg.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                ref={editInputRef}
+                                type="text"
+                                value={editText}
+                                onChange={(e) => setEditText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleSaveEdit(msg.id)
+                                  }
+                                  if (e.key === 'Escape') {
+                                    handleCancelEdit()
+                                  }
+                                }}
+                                className="flex-1 bg-background text-foreground px-2 py-1 rounded border-[2px] border-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 min-w-0"
+                              />
+                              <button
+                                onClick={() => handleSaveEdit(msg.id)}
+                                className="p-1 hover:bg-[#0A0A0A]/10 rounded transition-colors"
+                                aria-label="Save edit"
+                              >
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="p-1 hover:bg-[#0A0A0A]/10 rounded transition-colors"
+                                aria-label="Cancel edit"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="break-words">{msg.message}</p>
+                          )}
                         </div>
                         {/* Time + read status */}
                         <div className={`flex items-center gap-1 mt-0.5 ${isMe ? 'mr-1' : 'ml-1'}`}>
@@ -579,6 +849,22 @@ function ChatRoom({
         </div>
       )}
 
+      {/* Context Menu */}
+      <AnimatePresence>
+        {contextMenu && (
+          <MessageContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            onEdit={() => {
+              const msg = messages.find((m) => m.id === contextMenu.messageId)
+              if (msg) handleStartEdit(msg.id, msg.message)
+            }}
+            onDelete={() => handleDeleteMessage(contextMenu.messageId)}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Input Area */}
       <div className="border-t-[3px] border-foreground bg-card px-4 py-3">
         <div className="flex items-center gap-2">
@@ -592,6 +878,21 @@ function ChatRoom({
             disabled={sending}
             className="nb-input flex-1 px-4 py-3 bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700] disabled:opacity-50"
           />
+          <div className="relative">
+            <button
+              onClick={() => setShowEmojiPicker((prev) => !prev)}
+              className="nb-btn-sm bg-card text-foreground hover:bg-[#FFD700]/10 active:scale-95"
+              aria-label="Open emoji picker"
+            >
+              <Smile className="h-4 w-4" />
+            </button>
+            {showEmojiPicker && (
+              <EmojiPicker
+                onSelect={handleEmojiSelect}
+                onClose={() => setShowEmojiPicker(false)}
+              />
+            )}
+          </div>
           <button
             onClick={handleSend}
             disabled={sending || !newMessage.trim()}

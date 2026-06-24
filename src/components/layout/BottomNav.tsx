@@ -71,7 +71,7 @@ export default function BottomNav() {
     >
       <div className="mx-3 mb-3">
         <div
-          className="flex items-center justify-around rounded-2xl h-16 px-2 bg-[#FFD700] border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]"
+          className="flex items-center justify-around rounded-2xl h-16 px-2 bg-[#1A3A1A] border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]"
         >
           {tabs.map((tab) => {
             const isActive = currentView === tab.id
@@ -86,14 +86,14 @@ export default function BottomNav() {
                 {isActive && (
                   <motion.div
                     layoutId="nb-nav-pill"
-                    className="absolute inset-0 rounded-xl bg-white border-[3px] border-foreground shadow-[2px_2px_0px_var(--foreground)]"
+                    className="absolute inset-0 rounded-xl bg-[#2D5A2D] border-[3px] border-foreground shadow-[2px_2px_0px_var(--foreground)]"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
                 )}
                 <span
                   className="relative z-10 flex items-center gap-1.5"
                   style={{
-                    color: isActive ? '#1A1A1A' : '#7A6A00',
+                    color: isActive ? '#FFD700' : '#6B9B6B',
                   }}
                 >
                   <span className="relative">

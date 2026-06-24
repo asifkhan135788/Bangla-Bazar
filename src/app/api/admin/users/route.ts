@@ -79,7 +79,7 @@ export async function PUT(request: NextRequest) {
 
     const adminUserId = adminCheck.userId
     const body = await request.json()
-    const { userId, action, banDays, banReason } = body
+    const { userId, action, banDays, banReason, phone } = body
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400, headers })
@@ -157,7 +157,31 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ message: 'User permanently banned' }, { status: 200, headers })
     }
 
-    return NextResponse.json({ error: 'Invalid action. Use "ban", "unban", or "permanent_ban"' }, { status: 400, headers })
+    // Update phone number action
+    if (action === 'update_phone') {
+      if (!phone || typeof phone !== 'string') {
+        return NextResponse.json({ error: 'Phone number required' }, { status: 400, headers })
+      }
+
+      await db.user.update({
+        where: { id: userId },
+        data: { phone: phone.trim() || null },
+      })
+
+      await db.userLog.create({
+        data: {
+          userId,
+          action: 'admin_update_phone',
+          details: `Admin updated phone number to: ${phone.trim()}`,
+          ip: adminIP,
+          userAgent: adminUserAgent,
+        },
+      })
+
+      return NextResponse.json({ message: 'Phone number updated successfully' }, { status: 200, headers })
+    }
+
+    return NextResponse.json({ error: 'Invalid action. Use "ban", "unban", "permanent_ban", or "update_phone"' }, { status: 400, headers })
   } catch (error) {
     console.error('Admin users PUT error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers })

@@ -13,6 +13,7 @@ function serializeProduct(product: Record<string, unknown>) {
     ...product,
     price: toNumber(product.price),
     salePrice: product.salePrice != null ? toNumber(product.salePrice) : null,
+    deliveryCharge: product.deliveryCharge != null ? toNumber(product.deliveryCharge) : null,
     rating: toNumber(product.rating),
     buyCount: toNumber(product.buyCount ?? 0),
     reviewCount: toNumber(product.reviewCount ?? 0),
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
       data: {
         name: sanitizeInput(data.name), nameBN: data.nameBN ? sanitizeInput(data.nameBN) : undefined,
         description: data.description ? sanitizeInput(data.description) : undefined, descriptionBN: data.descriptionBN ? sanitizeInput(data.descriptionBN) : undefined,
-        price: data.price, salePrice: data.salePrice ?? undefined, categoryId: data.category,
+        price: data.price, salePrice: data.salePrice ?? undefined, deliveryCharge: data.deliveryCharge ?? undefined, categoryId: data.category,
         images, stock: data.stock ?? 0, featured: data.featured ?? false, active: data.active ?? true,
         sku: data.sku ? sanitizeInput(data.sku) : undefined, unit: data.unit ?? 'piece', tags,
       },

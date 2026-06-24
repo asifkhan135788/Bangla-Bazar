@@ -233,6 +233,134 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// DELETE /api/chat - Delete a message
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { messageId, userId } = body
+
+    if (!messageId || !userId) {
+      return NextResponse.json(
+        { error: 'messageId and userId are required' },
+        { status: 400, headers }
+      )
+    }
+
+    const resolvedUserId = await resolveAdminId(userId)
+
+    // Find the message first
+    const message = await db.chatMessage.findUnique({
+      where: { id: messageId },
+      select: { senderId: true },
+    })
+
+    if (!message) {
+      return NextResponse.json(
+        { error: 'Message not found' },
+        { status: 404, headers }
+      )
+    }
+
+    // Only allow deleting own messages
+    if (message.senderId !== resolvedUserId) {
+      return NextResponse.json(
+        { error: 'You can only delete your own messages' },
+        { status: 403, headers }
+      )
+    }
+
+    await db.chatMessage.delete({
+      where: { id: messageId },
+    })
+
+    return NextResponse.json({ message: 'Message deleted' }, { status: 200, headers })
+  } catch (error) {
+    console.error('Chat DELETE error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete message' },
+      { status: 500, headers }
+    )
+  }
+}
+
+// PATCH /api/chat - Edit a message
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { messageId, userId, message: newMessage } = body
+
+    if (!messageId || !userId || !newMessage) {
+      return NextResponse.json(
+        { error: 'messageId, userId, and message are required' },
+        { status: 400, headers }
+      )
+    }
+
+    if (typeof newMessage !== 'string' || newMessage.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Message cannot be empty' },
+        { status: 400, headers }
+      )
+    }
+
+    if (newMessage.length > 2000) {
+      return NextResponse.json(
+        { error: 'Message too long (max 2000 characters)' },
+        { status: 400, headers }
+      )
+    }
+
+    const resolvedUserId = await resolveAdminId(userId)
+    const sanitizedMessage = sanitizeInput(newMessage.trim())
+
+    if (!sanitizedMessage) {
+      return NextResponse.json(
+        { error: 'Message contains invalid content' },
+        { status: 400, headers }
+      )
+    }
+
+    // Find the message first
+    const existingMessage = await db.chatMessage.findUnique({
+      where: { id: messageId },
+      select: { senderId: true },
+    })
+
+    if (!existingMessage) {
+      return NextResponse.json(
+        { error: 'Message not found' },
+        { status: 404, headers }
+      )
+    }
+
+    // Only allow editing own messages
+    if (existingMessage.senderId !== resolvedUserId) {
+      return NextResponse.json(
+        { error: 'You can only edit your own messages' },
+        { status: 403, headers }
+      )
+    }
+
+    const updatedMessage = await db.chatMessage.update({
+      where: { id: messageId },
+      data: { message: sanitizedMessage },
+      include: {
+        sender: {
+          select: { id: true, name: true, avatar: true },
+        },
+      },
+    })
+
+    return NextResponse.json({ message: updatedMessage }, { status: 200, headers })
+  } catch (error) {
+    console.error('Chat PATCH error:', error)
+    return NextResponse.json(
+      { error: 'Failed to edit message' },
+      { status: 500, headers }
+    )
+  }
+}
+
 // PUT /api/chat - Mark messages as read
 export async function PUT(request: NextRequest) {
   try {

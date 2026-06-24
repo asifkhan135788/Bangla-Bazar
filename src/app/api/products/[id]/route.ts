@@ -12,6 +12,7 @@ function serializeProduct(product: Record<string, unknown>) {
     ...product,
     price: toNumber(product.price),
     salePrice: product.salePrice != null ? toNumber(product.salePrice) : null,
+    deliveryCharge: product.deliveryCharge != null ? toNumber(product.deliveryCharge) : null,
     rating: toNumber(product.rating),
     buyCount: toNumber(product.buyCount ?? 0),
     reviewCount: toNumber(product.reviewCount ?? 0),
@@ -115,6 +116,7 @@ export async function PUT(
     if (data.descriptionBN !== undefined) updateData.descriptionBN = data.descriptionBN ? sanitizeInput(data.descriptionBN) : null
     if (data.price !== undefined) updateData.price = data.price
     if (data.salePrice !== undefined) updateData.salePrice = data.salePrice
+    if (data.deliveryCharge !== undefined) updateData.deliveryCharge = data.deliveryCharge
     if (data.category !== undefined) updateData.categoryId = data.category
     if (data.images !== undefined) {
       // Handle images - could be string or array

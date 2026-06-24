@@ -50,6 +50,8 @@ export function CheckoutView() {
   const [gram, setGram] = useState('')
   const [home, setHome] = useState('')
   const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [manualLat, setManualLat] = useState('')
+  const [manualLng, setManualLng] = useState('')
   const [locationLoading, setLocationLoading] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [transactionId, setTransactionId] = useState('')
@@ -213,7 +215,7 @@ export function CheckoutView() {
   // Fetch live location
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser')
+      toast.error('Geolocation is not supported. Please enter coordinates manually below.')
       return
     }
     setLocationLoading(true)
@@ -230,19 +232,19 @@ export function CheckoutView() {
         setLocationLoading(false)
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            toast.error('Location permission denied. Please enable it in your browser settings.')
+            toast.error('Location permission denied. You can enter coordinates manually below.')
             break
           case error.POSITION_UNAVAILABLE:
-            toast.error('Location information unavailable.')
+            toast.error('Location unavailable. Please enter coordinates manually below.')
             break
           case error.TIMEOUT:
-            toast.error('Location request timed out.')
+            toast.error('Location request timed out. Try again or enter manually.')
             break
           default:
-            toast.error('Failed to get location.')
+            toast.error('Failed to get location. Please enter coordinates manually.')
         }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     )
   }
 
@@ -656,11 +658,59 @@ export function CheckoutView() {
               {liveLocation && (
                 <p className="text-xs text-[#22C55E] mt-1 text-center font-bold">
                   Location captured: {liveLocation.lat.toFixed(4)}, {liveLocation.lng.toFixed(4)}
+                  {' '}<a
+                    href={`https://www.google.com/maps?q=${liveLocation.lat},${liveLocation.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#FFD700] underline ml-1"
+                  >
+                    View on Map
+                  </a>
                 </p>
               )}
               <p className="text-xs text-muted-foreground mt-1 text-center">
                 This uses your device GPS for accurate delivery location
               </p>
+
+              {/* Manual coordinate fallback */}
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={manualLat}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.-]/g, '')
+                    setManualLat(val)
+                    if (val && manualLng) {
+                      const lat = parseFloat(val)
+                      const lng = parseFloat(manualLng)
+                      if (!isNaN(lat) && !isNaN(lng)) {
+                        setLiveLocation({ lat, lng })
+                      }
+                    }
+                  }}
+                  placeholder="Latitude (manual)"
+                  className="nb-input w-full px-3 py-2 text-xs text-foreground placeholder-muted-foreground bg-background"
+                />
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={manualLng}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.-]/g, '')
+                    setManualLng(val)
+                    if (manualLat && val) {
+                      const lat = parseFloat(manualLat)
+                      const lng = parseFloat(val)
+                      if (!isNaN(lat) && !isNaN(lng)) {
+                        setLiveLocation({ lat, lng })
+                      }
+                    }
+                  }}
+                  placeholder="Longitude (manual)"
+                  className="nb-input w-full px-3 py-2 text-xs text-foreground placeholder-muted-foreground bg-background"
+                />
+              </div>
             </div>
           </div>
 
