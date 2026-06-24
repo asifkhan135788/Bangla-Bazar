@@ -139,6 +139,41 @@ export async function POST(request: Request) {
   }
 }
 
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const orderId = searchParams.get('orderId')
+    const userId = searchParams.get('userId')
+
+    if (!orderId || !isValidId(orderId)) {
+      return NextResponse.json({ error: 'Valid order ID is required' }, { status: 400, headers })
+    }
+    if (!userId || !isValidId(userId)) {
+      return NextResponse.json({ error: 'Valid user ID is required' }, { status: 400, headers })
+    }
+
+    // Verify the order belongs to the user
+    const order = await db.order.findUnique({ where: { id: orderId } })
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404, headers })
+    }
+    if (order.userId !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403, headers })
+    }
+
+    // Delete order items first, then the order
+    await db.$transaction([
+      db.orderItem.deleteMany({ where: { orderId } }),
+      db.order.delete({ where: { id: orderId } }),
+    ])
+
+    return NextResponse.json({ message: 'Order deleted successfully' }, { status: 200, headers })
+  } catch (error) {
+    console.error('Orders DELETE error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers })
+  }
+}
+
 export async function PUT(request: Request) {
   try {
     const adminCheck = await validateAdminAccess(request)

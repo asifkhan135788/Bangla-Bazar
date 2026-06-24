@@ -7,11 +7,13 @@ import {
   ArrowLeft,
   Package,
   ChevronDown,
-  ChevronUp,
   RefreshCw,
   Loader2,
   ShoppingBag,
   MapPin,
+  Trash2,
+  Check,
+  X,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth-store'
 import { useNavStore } from '@/store/nav-store'
@@ -67,27 +69,29 @@ export function OrdersView() {
   const [loading, setLoading] = useState(true)
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
   const [reordering, setReordering] = useState<string | null>(null)
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null)
+  const [confirmDeleteOrderId, setConfirmDeleteOrderId] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchOrders = async () => {
     if (!isAuthenticated || !user) {
       setLoading(false)
       return
     }
-
-    const fetchOrders = async () => {
-      setLoading(true)
-      try {
-        const res = await fetch(`/api/orders?userId=${user.id}`)
-        if (res.ok) {
-          const data = await res.json()
-          setOrders(data.orders || [])
-        }
-      } catch {
-        toast.error(t('error'))
-      } finally {
-        setLoading(false)
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/orders?userId=${user.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setOrders(data.orders || [])
       }
+    } catch {
+      toast.error(t('error'))
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchOrders()
   }, [isAuthenticated, user, t])
 
@@ -123,17 +127,43 @@ export function OrdersView() {
     return labels ? (language === 'bn' ? labels.bn : labels.en) : method
   }
 
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!user) return
+    setDeletingOrderId(orderId)
+    try {
+      const res = await fetch(`/api/orders?orderId=${orderId}&userId=${user.id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        toast.success(
+          language === 'en' ? 'Order deleted successfully' : 'অর্ডার সফলভাবে মুছে ফেলা হয়েছে'
+        )
+        setOrders((prev) => prev.filter((o) => o.id !== orderId))
+        setConfirmDeleteOrderId(null)
+      } else {
+        const data = await res.json()
+        toast.error(data.error || (language === 'en' ? 'Failed to delete order' : 'অর্ডার মুছতে ব্যর্থ'))
+      }
+    } catch {
+      toast.error(t('error'))
+    } finally {
+      setDeletingOrderId(null)
+    }
+  }
+
   const handleReorder = async (order: Order) => {
     setReordering(order.id)
     try {
-      let addedCount = 0
+      const availableItems: CartItem[] = []
+      const unavailableNames: string[] = []
+
+      // Check all items first
       for (const item of order.orderItems) {
-        // Fetch product to get current price/stock
         const res = await fetch(`/api/products/${item.productId}`)
         if (res.ok) {
           const product = await res.json()
           if (product && product.active && product.stock > 0) {
-            addItem({
+            availableItems.push({
               id: item.id,
               productId: item.productId,
               name: item.name,
@@ -144,23 +174,48 @@ export function OrdersView() {
               quantity: Math.min(item.quantity, product.stock),
               stock: product.stock,
             })
-            addedCount++
+          } else {
+            unavailableNames.push(item.name)
           }
+        } else {
+          unavailableNames.push(item.name)
         }
       }
-      if (addedCount > 0) {
+
+      // If some items are unavailable, show which ones
+      if (unavailableNames.length > 0) {
+        const unavailableMsg =
+          language === 'en'
+            ? `No longer available: ${unavailableNames.join(', ')}`
+            : `আর পাওয়া যাচ্ছে না: ${unavailableNames.join(', ')}`
+
+        if (availableItems.length === 0) {
+          // All items unavailable
+          toast.error(unavailableMsg)
+        } else {
+          // Some available, some not — add available items and warn about unavailable
+          for (const cartItem of availableItems) {
+            addItem(cartItem)
+          }
+          toast.warning(unavailableMsg)
+          toast.success(
+            language === 'en'
+              ? `${availableItems.length} item(s) added to cart!`
+              : `${availableItems.length} টি আইটেম কার্টে যোগ হয়েছে!`
+          )
+          navigate('checkout')
+        }
+      } else {
+        // All items available — add to cart and go to checkout
+        for (const cartItem of availableItems) {
+          addItem(cartItem)
+        }
         toast.success(
           language === 'en'
-            ? `${addedCount} item(s) added to cart!`
-            : `${addedCount} টি আইটেম কার্টে যোগ হয়েছে!`
+            ? `${availableItems.length} item(s) added to cart!`
+            : `${availableItems.length} টি আইটেম কার্টে যোগ হয়েছে!`
         )
-        navigate('cart')
-      } else {
-        toast.error(
-          language === 'en'
-            ? 'Items are no longer available'
-            : 'আইটেমগুলো আর পাওয়া যাচ্ছে না'
-        )
+        navigate('checkout')
       }
     } catch {
       toast.error(t('error'))
@@ -274,6 +329,7 @@ export function OrdersView() {
               const isExpanded = expandedOrderId === order.id
               const statusStyle = STATUS_COLORS[order.status] || STATUS_COLORS.pending
               const itemCount = order.orderItems.reduce((sum, i) => sum + i.quantity, 0)
+              const isConfirmingDelete = confirmDeleteOrderId === order.id
 
               return (
                 <motion.div
@@ -407,27 +463,111 @@ export function OrdersView() {
                             )}
                           </div>
 
-                          {/* Reorder Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleReorder(order)
-                            }}
-                            disabled={reordering === order.id}
-                            className="nb-btn-sm w-full py-2.5 text-sm font-bold flex items-center justify-center gap-2 border-[#22C55E] bg-[#22C55E]/10 text-[#22C55E] hover:bg-[#22C55E]/20 disabled:opacity-50"
-                          >
-                            {reordering === order.id ? (
-                              <>
+                          {/* Action Buttons */}
+                          <div className="flex gap-3">
+                            {/* Reorder Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleReorder(order)
+                              }}
+                              disabled={reordering === order.id}
+                              className="nb-btn-sm flex-1 py-2.5 text-sm font-bold flex items-center justify-center gap-2 border-[#22C55E] bg-[#22C55E]/10 text-[#22C55E] hover:bg-[#22C55E]/20 disabled:opacity-50"
+                            >
+                              {reordering === order.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  {language === 'en' ? 'Checking...' : 'যাচাই করছে...'}
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="h-4 w-4" />
+                                  {language === 'en' ? 'Reorder' : 'আবার অর্ডার করুন'}
+                                </>
+                              )}
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setConfirmDeleteOrderId(isConfirmingDelete ? null : order.id)
+                              }}
+                              disabled={deletingOrderId === order.id}
+                              className={`nb-btn-sm py-2.5 px-4 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors ${
+                                isConfirmingDelete
+                                  ? 'border-[#EF4444] bg-[#EF4444]/10 text-[#EF4444]'
+                                  : 'border-[#EF4444]/40 bg-transparent text-[#EF4444]/60 hover:border-[#EF4444] hover:text-[#EF4444]'
+                              }`}
+                            >
+                              {deletingOrderId === order.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                {language === 'en' ? 'Adding to cart...' : 'কার্টে যোগ হচ্ছে...'}
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="h-4 w-4" />
-                                {language === 'en' ? 'Reorder' : 'আবার অর্ডার করুন'}
-                              </>
+                              ) : isConfirmingDelete ? (
+                                <>
+                                  <Check className="h-4 w-4" />
+                                  {language === 'en' ? 'Confirm' : 'নিশ্চিত'}
+                                </>
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </button>
+
+                            {/* Cancel Delete Button */}
+                            {isConfirmingDelete && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setConfirmDeleteOrderId(null)
+                                }}
+                                className="nb-btn-sm py-2.5 px-4 text-sm font-bold flex items-center justify-center gap-2 border-foreground/30 bg-transparent text-muted-foreground hover:text-foreground"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
                             )}
-                          </button>
+                          </div>
+
+                          {/* Delete Confirmation Message */}
+                          <AnimatePresence>
+                            {isConfirmingDelete && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="rounded-lg border-[2px] border-[#EF4444]/40 bg-[#EF4444]/5 p-3"
+                              >
+                                <p className="text-xs font-bold text-[#EF4444]">
+                                  {language === 'en'
+                                    ? '⚠️ This will permanently delete this order from your history. Click ✓ to confirm.'
+                                    : '⚠️ এটি আপনার ইতিহাস থেকে এই অর্ডারটি স্থায়ীভাবে মুছে ফেলবে। নিশ্চিত করতে ✓ ক্লিক করুন।'}
+                                </p>
+                                <div className="flex gap-2 mt-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDeleteOrder(order.id)
+                                    }}
+                                    disabled={deletingOrderId === order.id}
+                                    className="flex-1 nb-btn-sm py-2 text-xs font-bold bg-[#EF4444] text-white border-[#EF4444] hover:bg-[#DC2626] disabled:opacity-50"
+                                  >
+                                    {deletingOrderId === order.id ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" />
+                                    ) : (
+                                      language === 'en' ? 'Yes, Delete' : 'হ্যাঁ, মুছুন'
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setConfirmDeleteOrderId(null)
+                                    }}
+                                    className="flex-1 nb-btn-sm py-2 text-xs font-bold border-foreground/30 text-foreground hover:bg-foreground/5"
+                                  >
+                                    {language === 'en' ? 'Cancel' : 'বাতিল'}
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       </motion.div>
                     )}

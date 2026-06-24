@@ -8,6 +8,7 @@ import BottomNav from '@/components/layout/BottomNav'
 import PageTransition from '@/components/layout/PageTransition'
 import HeroSection from '@/components/home/HeroSection'
 import FeaturedProducts from '@/components/home/FeaturedProducts'
+import AllCategoriesProducts from '@/components/home/AllCategoriesProducts'
 import CategoryGrid from '@/components/home/CategoryGrid'
 import PromoBanner from '@/components/home/PromoBanner'
 import ProductDetail from '@/components/products/ProductDetail'
@@ -45,6 +46,7 @@ function HomeView() {
       <CategoryGrid />
       <PromoBanner />
       <FeaturedProducts />
+      <AllCategoriesProducts />
     </div>
   )
 }

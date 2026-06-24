@@ -377,8 +377,19 @@ export function CheckoutView() {
 
       // Clear cart and show success
       clearCart()
+
+      // Show order success toast notification
+      const successOrderId = orderData.order?.id?.slice(-8).toUpperCase() || 'N/A'
+      toast.success(
+        `Order #${successOrderId} placed successfully! ৳${total.toLocaleString()}`,
+        {
+          duration: 5000,
+          position: 'top-center',
+        }
+      )
+
       setOrderSuccess({
-        orderId: orderData.order?.id?.slice(-8).toUpperCase() || 'N/A',
+        orderId: successOrderId,
         total,
         paymentMethod,
       })
