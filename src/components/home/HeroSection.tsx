@@ -113,7 +113,7 @@ export default function HeroSection() {
       </motion.div>
 
       {/* Dark Overlay - flat, no blur */}
-      <div className="absolute inset-0 bg-background/80" />
+      <div className="absolute inset-0 bg-background/0" />
 
       {/* Top accent line - NB style */}
       <div className="absolute top-0 left-0 right-0 h-[6px] bg-[#FFD700] border-b-[3px] border-foreground z-20" />
