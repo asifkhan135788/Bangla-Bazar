@@ -106,7 +106,7 @@ export default function HeroSection() {
         <div
           className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: "url('/images/banners/hero-banner.svg')",
+            backgroundImage: "url('https://i.postimg.cc/V6Vqgq2c/hero-banner.jpg')",
             transform: `translateY(${offsetY * 0.1}px)`,
           }}
         />
