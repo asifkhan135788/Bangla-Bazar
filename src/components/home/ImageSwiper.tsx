@@ -16,11 +16,11 @@ interface ImageSwiperProps {
 }
 
 const DEFAULT_CARDS: CardData[] = [
-  { id: 1, imageUrl: '/images/collections/jamdani.jpg', title: 'Jamdani Sharee' },
-  { id: 2, imageUrl: '/images/collections/nakshi.jpg', title: 'Nakshi Kantha' },
-  { id: 3, imageUrl: '/images/collections/punjabi.jpg', title: 'Punjabi Collection' },
-  { id: 4, imageUrl: '/images/collections/shoes.jpg', title: 'Traditional Shoes' },
-  { id: 5, imageUrl: '/images/collections/muslin.jpg', title: 'Muslin Fabric' },
+  { id: 1, imageUrl: '/jamdani.jpg', title: 'Jamdani Sharee' },
+  { id: 2, imageUrl: '/nakshi.jpg', title: 'Nakshi Kantha' },
+  { id: 3, imageUrl: '/punjabi.jpg', title: 'Punjabi Collection' },
+  { id: 4, imageUrl: '/shoes.jpg', title: 'Traditional Shoes' },
+  { id: 5, imageUrl: '/muslin.jpg', title: 'Muslin Fabric' },
 ]
 
 export const ImageSwiper: React.FC<ImageSwiperProps> = ({
