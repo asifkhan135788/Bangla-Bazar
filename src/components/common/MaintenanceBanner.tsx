@@ -17,9 +17,9 @@ const BANNER_STYLES: Record<
 > = {
   info: {
     bg: 'rgba(78, 205, 196, 0.1)',
-    border: 'border-[3px] border-[#4ECDC4]',
-    text: 'text-[#4ECDC4]',
-    icon: <Info className="h-5 w-5 text-[#4ECDC4]" />,
+    border: 'border-[3px] border-[#22C55E]',
+    text: 'text-[#22C55E]',
+    icon: <Info className="h-5 w-5 text-[#22C55E]" />,
   },
   warning: {
     bg: 'rgba(255, 215, 0, 0.1)',

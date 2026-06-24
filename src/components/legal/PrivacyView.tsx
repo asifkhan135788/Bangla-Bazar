@@ -105,7 +105,7 @@ export function PrivacyView() {
             <span className="text-xs">Back</span>
           </button>
           <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-[#4ECDC4]" />
+            <Shield className="h-5 w-5 text-[#22C55E]" />
             <h1 className="text-lg font-heading font-black text-foreground">Privacy Policy</h1>
           </div>
         </div>
@@ -119,9 +119,9 @@ export function PrivacyView() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="nb-card-static bg-[#4ECDC4]/10 border-[#4ECDC4] p-5 mb-6"
+            className="nb-card-static bg-[#22C55E]/10 border-[#22C55E] p-5 mb-6"
           >
-            <div className="nb-accent-bar w-16 mb-4" style={{ background: '#4ECDC4' }} />
+            <div className="nb-accent-bar w-16 mb-4" style={{ background: '#22C55E' }} />
             <p className="text-sm text-muted-foreground font-medium leading-relaxed">
               Last updated: January 2025
             </p>
@@ -146,7 +146,7 @@ export function PrivacyView() {
                   <span className="text-xl">{section.icon}</span>
                   <h2 className="text-base font-heading font-black text-foreground">{section.title}</h2>
                 </div>
-                <div className="nb-accent-bar w-10 mb-3" style={{ background: '#4ECDC4' }} />
+                <div className="nb-accent-bar w-10 mb-3" style={{ background: '#22C55E' }} />
                 <div className="text-sm text-muted-foreground font-medium leading-relaxed whitespace-pre-line">
                   {section.content}
                 </div>

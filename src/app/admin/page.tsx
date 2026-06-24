@@ -2001,7 +2001,7 @@ function ChatTab({ token }: { token: string }) {
                       </div>
                     )}
                     {conv.unreadCount > 0 && (
-                      <span className="nb-badge absolute -top-1 -right-1 bg-[#FF6B9D] text-white text-[9px] min-w-[16px] h-[16px] px-0.5">
+                      <span className="nb-badge absolute -top-1 -right-1 bg-[#22C55E] text-white text-[9px] min-w-[16px] h-[16px] px-0.5">
                         {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                       </span>
                     )}

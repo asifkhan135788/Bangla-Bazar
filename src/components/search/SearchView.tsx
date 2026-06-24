@@ -328,7 +328,7 @@ export function SearchView() {
               ))}
               <button
                 onClick={handleClearRecentSearches}
-                className="text-xs text-[#FF6B9D] font-bold hover:underline ml-1"
+                className="text-xs text-[#22C55E] font-bold hover:underline ml-1"
                 aria-label="Clear recent searches"
               >
                 {t('clear')}
@@ -339,7 +339,7 @@ export function SearchView() {
           {/* Filter toggle */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="mt-2 flex items-center gap-1.5 text-sm font-bold text-[#FF6B9D]"
+            className="mt-2 flex items-center gap-1.5 text-sm font-bold text-[#22C55E]"
           >
             <svg
               width="16"

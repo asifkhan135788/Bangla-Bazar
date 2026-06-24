@@ -39,7 +39,7 @@ interface Order {
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   pending: { bg: '#FFD700', text: '#1A1A1A', border: '#1A1A1A' },
-  confirmed: { bg: '#4ECDC4', text: '#1A1A1A', border: '#1A1A1A' },
+  confirmed: { bg: '#22C55E', text: '#1A1A1A', border: '#1A1A1A' },
   processing: { bg: '#A855F7', text: '#FFFFFF', border: '#1A1A1A' },
   shipped: { bg: '#06b6d4', text: '#FFFFFF', border: '#1A1A1A' },
   delivered: { bg: '#22c55e', text: '#FFFFFF', border: '#1A1A1A' },
@@ -98,7 +98,7 @@ export function ProfileView() {
         className="py-6 bg-background"
       >
         <div className="text-center mb-6 px-4">
-          <div className="w-20 h-20 rounded-xl mx-auto mb-4 flex items-center justify-center bg-[#FF6B9D] border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]">
+          <div className="w-20 h-20 rounded-xl mx-auto mb-4 flex items-center justify-center bg-[#22C55E] border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]">
             <User className="h-9 w-9 text-white" />
           </div>
           <h2 className="text-lg font-black text-foreground uppercase tracking-wide">
@@ -415,10 +415,10 @@ export function ProfileView() {
                   </h2>
                   <button
                     onClick={handleStartEdit}
-                    className="p-1.5 rounded-md border-2 border-foreground bg-[#4ECDC4]/20 hover:bg-[#4ECDC4]/40 transition-colors shadow-[2px_2px_0px_var(--foreground)]"
+                    className="p-1.5 rounded-md border-2 border-foreground bg-[#22C55E]/20 hover:bg-[#22C55E]/40 transition-colors shadow-[2px_2px_0px_var(--foreground)]"
                     aria-label={t('editProfile')}
                   >
-                    <Pencil className="h-3.5 w-3.5 text-[#4ECDC4]" />
+                    <Pencil className="h-3.5 w-3.5 text-[#22C55E]" />
                   </button>
                 </div>
                 <p className="text-sm text-muted-foreground truncate font-semibold">{user.email}</p>
@@ -446,7 +446,7 @@ export function ProfileView() {
           {orders.length > 0 && (
             <button
               onClick={() => navigate('orders')}
-              className="text-xs text-[#FF6B9D] font-bold hover:underline"
+              className="text-xs text-[#22C55E] font-bold hover:underline"
             >
               {t('viewAll')}
             </button>
@@ -518,7 +518,7 @@ export function ProfileView() {
                 idx < settingsItems.length - 1 ? 'border-b-[2px] border-foreground/20' : ''
               }`}
             >
-              <span className="text-[#FF6B9D] shrink-0">{item.icon}</span>
+              <span className="text-[#22C55E] shrink-0">{item.icon}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-foreground">{item.label}</p>
                 {item.subtitle && (

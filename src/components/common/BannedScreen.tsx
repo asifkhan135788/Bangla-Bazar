@@ -117,7 +117,7 @@ export function BannedScreen() {
               <div className="pt-1">
                 <a
                   href="mailto:support@banglabazar.com.bd"
-                  className="inline-block text-sm font-bold text-[#FF6B9D]"
+                  className="inline-block text-sm font-bold text-[#22C55E]"
                 >
                   support@banglabazar.com.bd
                 </a>

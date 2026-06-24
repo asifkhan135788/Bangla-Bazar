@@ -110,7 +110,7 @@ export function ProductCard({
 
         {/* Discount badge - NB sticker style */}
         {hasDiscount && (
-          <span className="absolute top-2 left-2 px-2.5 py-1 rounded-xl text-xs font-extrabold bg-[#FF6B9D] text-white border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)] -rotate-3 uppercase tracking-wide">
+          <span className="absolute top-2 left-2 px-2.5 py-1 rounded-xl text-xs font-extrabold bg-[#22C55E] text-white border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)] -rotate-3 uppercase tracking-wide">
             -{discountPct}% OFF
           </span>
         )}
@@ -131,7 +131,7 @@ export function ProductCard({
           {name}
         </h3>
         {nameBN && (
-          <p className="text-xs text-[#FF6B9D] font-bold mt-0.5 line-clamp-1">{nameBN}</p>
+          <p className="text-xs text-[#22C55E] font-bold mt-0.5 line-clamp-1">{nameBN}</p>
         )}
 
         {/* Rating + Buy Count */}

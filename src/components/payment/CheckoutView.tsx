@@ -364,7 +364,7 @@ export function CheckoutView() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
-          className="w-24 h-24 nb-card bg-[#4ECDC4]/10 flex items-center justify-center mb-6"
+          className="w-24 h-24 nb-card bg-[#22C55E]/10 flex items-center justify-center mb-6"
         >
           <motion.svg
             initial={{ pathLength: 0 }}
@@ -374,7 +374,7 @@ export function CheckoutView() {
             height="48"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#4ECDC4"
+            stroke="#22C55E"
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -654,7 +654,7 @@ export function CheckoutView() {
                 )}
               </button>
               {liveLocation && (
-                <p className="text-xs text-[#4ECDC4] mt-1 text-center font-bold">
+                <p className="text-xs text-[#22C55E] mt-1 text-center font-bold">
                   Location captured: {liveLocation.lat.toFixed(4)}, {liveLocation.lng.toFixed(4)}
                 </p>
               )}
@@ -802,7 +802,7 @@ export function CheckoutView() {
                     title="Copy number"
                   >
                     {copied ? (
-                      <Check className="h-3.5 w-3.5 text-[#4ECDC4]" />
+                      <Check className="h-3.5 w-3.5 text-[#22C55E]" />
                     ) : (
                       <Copy className="h-3.5 w-3.5" style={{ color: paymentMethod === 'bkash' ? '#E2136E' : '#F6921E' }} />
                     )}

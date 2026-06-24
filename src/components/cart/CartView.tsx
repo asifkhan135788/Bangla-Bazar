@@ -115,7 +115,7 @@ export function CartView() {
           className="flex items-center gap-2 text-sm font-bold text-foreground mb-2"
         >
           {allSelected ? (
-            <CheckSquare className="h-5 w-5 text-[#4ECDC4]" />
+            <CheckSquare className="h-5 w-5 text-[#22C55E]" />
           ) : (
             <Square className="h-5 w-5 text-muted-foreground" />
           )}
@@ -137,7 +137,7 @@ export function CartView() {
                 exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
                 layout
-                className={`nb-card bg-card p-3 mb-3 flex gap-3 ${isSelected ? 'ring-2 ring-[#4ECDC4] ring-offset-2 ring-offset-background' : ''}`}
+                className={`nb-card bg-card p-3 mb-3 flex gap-3 ${isSelected ? 'ring-2 ring-[#22C55E] ring-offset-2 ring-offset-background' : ''}`}
               >
                 {/* Checkbox */}
                 <button
@@ -146,7 +146,7 @@ export function CartView() {
                   aria-label={isSelected ? 'Deselect item' : 'Select item'}
                 >
                   {isSelected ? (
-                    <CheckSquare className="h-5 w-5 text-[#4ECDC4]" />
+                    <CheckSquare className="h-5 w-5 text-[#22C55E]" />
                   ) : (
                     <Square className="h-5 w-5 text-muted-foreground" />
                   )}
@@ -188,7 +188,7 @@ export function CartView() {
                     <div className="flex items-center">
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                        className="w-8 h-8 rounded-l-lg border-[2.5px] border-foreground flex items-center justify-center text-foreground hover:bg-[#4ECDC4]/10 active:translate-y-[1px] transition-all bg-card"
+                        className="w-8 h-8 rounded-l-lg border-[2.5px] border-foreground flex items-center justify-center text-foreground hover:bg-[#22C55E]/10 active:translate-y-[1px] transition-all bg-card"
                         aria-label="Decrease quantity"
                       >
                         <Minus className="h-3.5 w-3.5" />
@@ -199,7 +199,7 @@ export function CartView() {
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                         disabled={item.quantity >= item.stock}
-                        className="w-8 h-8 rounded-r-lg border-[2.5px] border-foreground flex items-center justify-center text-foreground hover:bg-[#4ECDC4]/10 active:translate-y-[1px] disabled:opacity-40 disabled:cursor-not-allowed transition-all bg-card"
+                        className="w-8 h-8 rounded-r-lg border-[2.5px] border-foreground flex items-center justify-center text-foreground hover:bg-[#22C55E]/10 active:translate-y-[1px] disabled:opacity-40 disabled:cursor-not-allowed transition-all bg-card"
                         aria-label="Increase quantity"
                       >
                         <Plus className="h-3.5 w-3.5" />

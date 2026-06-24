@@ -104,12 +104,12 @@ export function AboutView() {
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className="w-20 h-20 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-[#FF6B9D] border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]"
+            className="w-20 h-20 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-[#22C55E] border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)]"
           >
             <span className="text-2xl font-black text-white">BB</span>
           </motion.div>
           <h2 className="text-3xl sm:text-4xl font-heading font-black text-foreground">
-            Bangla <span className="text-[#FF6B9D]">Bazar</span>
+            Bangla <span className="text-[#22C55E]">Bazar</span>
           </h2>
           <p className="text-sm font-medium text-foreground/80 mt-2 max-w-md mx-auto">
             Bangladesh&apos;s premier marketplace for authentic traditional products
@@ -160,7 +160,7 @@ export function AboutView() {
           className="nb-card-static bg-card p-6 mb-6"
         >
           <h3 className="text-lg font-heading font-black text-foreground mb-1 flex items-center gap-2">
-            <span className="text-[#4ECDC4]">🎯</span>
+            <span className="text-[#22C55E]">🎯</span>
             Our Mission
           </h3>
           <div className="nb-accent-bar w-12 mb-4" />
@@ -184,7 +184,7 @@ export function AboutView() {
           className="mb-6"
         >
           <h3 className="text-lg font-heading font-black text-foreground mb-1 flex items-center gap-2">
-            <span className="text-[#FF6B9D]">💎</span>
+            <span className="text-[#22C55E]">💎</span>
             Our Values
           </h3>
           <div className="nb-accent-bar w-12 mb-4" />
@@ -256,7 +256,7 @@ export function AboutView() {
           className="mb-6"
         >
           <h3 className="text-lg font-heading font-black text-foreground mb-1 flex items-center gap-2">
-            <span className="text-[#4ECDC4]">👥</span>
+            <span className="text-[#22C55E]">👥</span>
             Our Team
           </h3>
           <div className="nb-accent-bar w-12 mb-4" />
@@ -270,12 +270,12 @@ export function AboutView() {
                 className="nb-card bg-card p-4"
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-[#FF6B9D] border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#22C55E] border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)] flex items-center justify-center shrink-0">
                     <span className="text-xs font-black text-white">{member.initials}</span>
                   </div>
                   <div>
                     <h4 className="text-sm font-heading font-black text-foreground">{member.name}</h4>
-                    <p className="text-xs font-bold text-[#FF6B9D]">{member.role}</p>
+                    <p className="text-xs font-bold text-[#22C55E]">{member.role}</p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground font-medium leading-relaxed">

@@ -21,7 +21,7 @@ export default function PromoBanner() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, type: 'spring' }}
           >
-            <Sparkles className="h-8 w-8 text-[#FF6B9D] mb-2" />
+            <Sparkles className="h-8 w-8 text-[#22C55E] mb-2" />
           </motion.div>
 
           {/* English Text */}
@@ -33,7 +33,7 @@ export default function PromoBanner() {
             className="text-xl sm:text-2xl md:text-3xl font-black text-foreground"
           >
             Special Offer!{' '}
-            <span className="text-[#FF6B9D]">Traditional Wear Collection</span>
+            <span className="text-[#22C55E]">Traditional Wear Collection</span>
           </motion.h2>
 
           {/* Bengali Text */}

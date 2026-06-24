@@ -114,7 +114,7 @@ export default function CategoryGrid() {
             <p className="text-muted-foreground mb-3">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="text-[#FF6B9D] font-bold text-sm hover:underline"
+              className="text-[#22C55E] font-bold text-sm hover:underline"
             >
               Try again
             </button>

@@ -132,7 +132,7 @@ export default function HeroSection() {
         >
           <span>{displayedTitle}</span>
           <span
-            className={`inline-block w-[4px] h-[0.75em] bg-[#FF6B9D] ml-1 align-middle ${
+            className={`inline-block w-[4px] h-[0.75em] bg-[#22C55E] ml-1 align-middle ${
               titleComplete && !subtitleStarted ? 'animate-blink' : (!titleComplete ? '' : 'animate-blink')
             }`}
           />
@@ -147,7 +147,7 @@ export default function HeroSection() {
         >
           <span>{displayedSubtitle}</span>
           {subtitleStarted && !subtitleComplete && (
-            <span className="inline-block w-[4px] h-[1em] bg-[#FF6B9D] ml-0.5 align-middle animate-blink" />
+            <span className="inline-block w-[4px] h-[1em] bg-[#22C55E] ml-0.5 align-middle animate-blink" />
           )}
         </motion.p>
 
@@ -191,7 +191,7 @@ export default function HeroSection() {
             ease: 'easeInOut',
           }}
         >
-          <ChevronDown className="h-6 w-6 text-[#FF6B9D] stroke-[3]" />
+          <ChevronDown className="h-6 w-6 text-[#22C55E] stroke-[3]" />
         </motion.div>
       </motion.div>
 

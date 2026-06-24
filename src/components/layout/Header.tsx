@@ -54,8 +54,8 @@ export default function Header() {
             BB
           </span>
           <span className="text-xl font-heading font-black tracking-tight">
-            <span className="text-[#FF6B9D]">Bangla</span>{' '}
-            <span className="text-foreground">Bazar</span>
+            <span className="text-[#22C55E]">Bangla</span>{' '}
+            <span className="text-[#FFD700]">Bazar</span>
           </span>
         </button>
 
@@ -99,7 +99,7 @@ export default function Header() {
           >
             <ShoppingCart className="h-4 w-4" />
             {mounted && displayItemCount > 0 && (
-              <span className="absolute -top-2.5 -right-2.5 nb-badge bg-[#FF6B9D] text-white text-[9px] min-w-[20px] text-center">
+              <span className="absolute -top-2.5 -right-2.5 nb-badge bg-[#22C55E] text-white text-[9px] min-w-[20px] text-center">
                 {displayItemCount > 99 ? '99+' : displayItemCount}
               </span>
             )}

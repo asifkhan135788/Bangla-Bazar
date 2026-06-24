@@ -145,7 +145,7 @@ function ConversationList({
             )}
             {/* Online indicator (always show for admin) */}
             {conv.otherUserId === 'admin' && (
-              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#4ECDC4] rounded-full border-2 border-foreground" />
+              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#22C55E] rounded-full border-2 border-foreground" />
             )}
           </div>
 
@@ -164,7 +164,7 @@ function ConversationList({
                 {conv.senderType === 'admin' ? '' : t('you') + ': '}{conv.lastMessage}
               </p>
               {conv.unreadCount > 0 && (
-                <span className="nb-badge ml-2 shrink-0 bg-[#FF6B9D] text-white">
+                <span className="nb-badge ml-2 shrink-0 bg-[#22C55E] text-white">
                   {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                 </span>
               )}
@@ -428,7 +428,7 @@ function ChatRoom({
             </div>
           )}
           {isOtherOnline && (
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#4ECDC4] rounded-full border-2 border-foreground" />
+            <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#22C55E] rounded-full border-2 border-foreground" />
           )}
         </div>
 
@@ -436,16 +436,16 @@ function ChatRoom({
           <h2 className="text-sm font-black text-foreground truncate">{displayName}</h2>
           <p className="text-xs text-muted-foreground">
             {isTyping ? (
-              <span className="text-[#4ECDC4] font-bold flex items-center gap-1">
+              <span className="text-[#22C55E] font-bold flex items-center gap-1">
                 typing
                 <span className="inline-flex gap-0.5">
-                  <span className="w-1 h-1 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1 h-1 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1 h-1 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-1 h-1 bg-[#22C55E] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1 h-1 bg-[#22C55E] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1 h-1 bg-[#22C55E] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </span>
               </span>
             ) : isOtherOnline ? (
-              <span className="text-[#4ECDC4] font-bold">Online</span>
+              <span className="text-[#22C55E] font-bold">Online</span>
             ) : (
               t('replyWithinMinutes')
             )}
@@ -554,9 +554,9 @@ function ChatRoom({
                     >
                       <div className="bg-card border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] rounded-xl px-4 py-3">
                         <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 bg-[#4ECDC4] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
                       </div>
                     </motion.div>

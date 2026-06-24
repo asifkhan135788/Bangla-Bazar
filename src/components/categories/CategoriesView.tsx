@@ -131,7 +131,7 @@ export function CategoriesView() {
       >
         <button
           onClick={() => navigate('home')}
-          className="text-muted-foreground hover:text-[#FF6B9D] font-bold transition-colors"
+          className="text-muted-foreground hover:text-[#22C55E] font-bold transition-colors"
         >
           Home
         </button>
@@ -262,7 +262,7 @@ export function CategoriesView() {
                   setActiveCategoryName('')
                   setProducts([])
                 }}
-                className="nb-btn-sm bg-transparent text-[#FF6B9D] border-[2.5px] border-[#FF6B9D] px-3 py-1.5 text-sm"
+                className="nb-btn-sm bg-transparent text-[#22C55E] border-[2.5px] border-[#22C55E] px-3 py-1.5 text-sm"
               >
                 Clear
               </button>

@@ -99,7 +99,7 @@ export default function BottomNav() {
                   <span className="relative">
                     {tab.icon}
                     {tab.id === 'cart' && displayItemCount > 0 && (
-                      <span className="absolute -top-1.5 -right-2.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-black bg-[#FF6B9D] text-white border-2 border-foreground px-0.5">
+                      <span className="absolute -top-1.5 -right-2.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-black bg-[#22C55E] text-white border-2 border-foreground px-0.5">
                         {displayItemCount > 99 ? '99+' : displayItemCount}
                       </span>
                     )}

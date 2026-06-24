@@ -275,7 +275,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
 
           {/* Sale Badge */}
           {product.salePrice && discountPercent > 0 && (
-            <div className="nb-sticker absolute top-3 left-3 bg-[#FF6B9D] text-white -rotate-3">
+            <div className="nb-sticker absolute top-3 left-3 bg-[#22C55E] text-white -rotate-3">
               -{discountPercent}% OFF
             </div>
           )}
@@ -289,7 +289,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
                   onClick={() => setCurrentImageIndex(i)}
                   className={`rounded-full transition-all ${
                     i === currentImageIndex
-                      ? 'h-3 w-5 bg-[#FF6B9D]'
+                      ? 'h-3 w-5 bg-[#22C55E]'
                       : 'h-2.5 w-2.5 bg-foreground/40 hover:bg-foreground/60'
                   }`}
                 />
@@ -439,7 +439,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
                       navigate('login')
                     }
                   }}
-                  className="nb-btn bg-[#4ECDC4] text-[#0A0A0A] flex items-center justify-center gap-2 py-3.5 px-4 text-base"
+                  className="nb-btn bg-[#22C55E] text-[#0A0A0A] flex items-center justify-center gap-2 py-3.5 px-4 text-base"
                 >
                   <MessageCircle className="h-5 w-5" />
                 </button>

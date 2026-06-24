@@ -46,7 +46,7 @@ function getPasswordStrength(password: string): {
 
   if (score <= 1) return { score, label: 'Weak', color: '#EF4444' }
   if (score <= 2) return { score, label: 'Fair', color: '#FF8A5C' }
-  if (score <= 3) return { score, label: 'Good', color: '#4ECDC4' }
+  if (score <= 3) return { score, label: 'Good', color: '#22C55E' }
   return { score, label: 'Strong', color: '#22c55e' }
 }
 
@@ -161,7 +161,7 @@ export function RegisterForm() {
       <div className="nb-card bg-card p-6">
         {/* Title */}
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center bg-[#FF6B9D] border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)]">
+          <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center bg-[#22C55E] border-[3px] border-foreground shadow-[3px_3px_0px_var(--foreground)]">
             <svg
               width="28"
               height="28"
@@ -301,7 +301,7 @@ export function RegisterForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md border-2 border-foreground bg-[#4ECDC4] text-[#1A1A1A] hover:brightness-110 transition shadow-[2px_2px_0px_var(--foreground)]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md border-2 border-foreground bg-[#22C55E] text-[#1A1A1A] hover:brightness-110 transition shadow-[2px_2px_0px_var(--foreground)]"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
@@ -392,7 +392,7 @@ export function RegisterForm() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md border-2 border-foreground bg-[#4ECDC4] text-[#1A1A1A] hover:brightness-110 transition shadow-[2px_2px_0px_var(--foreground)]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md border-2 border-foreground bg-[#22C55E] text-[#1A1A1A] hover:brightness-110 transition shadow-[2px_2px_0px_var(--foreground)]"
                 aria-label={
                   showConfirmPassword ? 'Hide password' : 'Show password'
                 }
@@ -473,7 +473,7 @@ export function RegisterForm() {
         {/* Divider */}
         <div className="flex items-center gap-3 my-5">
           <div className="flex-1 nb-divider" />
-          <span className="text-xs text-foreground font-black bg-[#4ECDC4] px-3 py-1 rounded-md border-2 border-foreground shadow-[2px_2px_0px_var(--foreground)]">
+          <span className="text-xs text-foreground font-black bg-[#22C55E] px-3 py-1 rounded-md border-2 border-foreground shadow-[2px_2px_0px_var(--foreground)]">
             OR
           </span>
           <div className="flex-1 nb-divider" />
@@ -499,7 +499,7 @@ export function RegisterForm() {
           Already have an account?{' '}
           <button
             onClick={() => navigate('login')}
-            className="text-[#FF6B9D] font-bold hover:underline"
+            className="text-[#22C55E] font-bold hover:underline"
           >
             Login
           </button>

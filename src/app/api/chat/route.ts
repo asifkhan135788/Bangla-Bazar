@@ -4,6 +4,18 @@ import { sanitizeInput, getSecurityHeaders } from '@/lib/security'
 
 const headers = { ...getSecurityHeaders(), 'Content-Type': 'application/json' }
 
+// Helper: resolve 'admin' to actual admin user UUID
+async function resolveAdminId(userId: string): Promise<string> {
+  if (userId === 'admin') {
+    const admin = await db.user.findFirst({
+      where: { role: 'admin' },
+      select: { id: true },
+    })
+    if (admin) return admin.id
+  }
+  return userId
+}
+
 // GET /api/chat?action=conversations&userId=xxx
 // GET /api/chat?action=user_info&userId=xxx
 // GET /api/chat?senderId=xxx&userId=xxx
@@ -14,8 +26,10 @@ export async function GET(request: NextRequest) {
 
     // ── Get conversations list ──
     if (action === 'conversations') {
-      const userId = searchParams.get('userId')
-      if (!userId) {
+      const rawUserId = searchParams.get('userId') || ''
+      const userId = await resolveAdminId(rawUserId)
+
+      if (!rawUserId) {
         return NextResponse.json({ error: 'userId is required' }, { status: 400, headers })
       }
 
@@ -30,7 +44,10 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           sender: {
-            select: { id: true, name: true, avatar: true, email: true },
+            select: { id: true, name: true, avatar: true, email: true, role: true },
+          },
+          receiver: {
+            select: { id: true, name: true, avatar: true, email: true, role: true },
           },
         },
       })
@@ -44,22 +61,25 @@ export async function GET(request: NextRequest) {
         lastMessageTime: string
         unreadCount: number
         senderType: string
+        isOtherAdmin: boolean
       }>()
 
       for (const msg of messages) {
-        const otherId = msg.senderId === userId ? (msg.receiverId || 'admin') : msg.senderId
-        if (!conversationMap.has(otherId)) {
-          const isSender = msg.senderId === userId
+        const otherIsSender = msg.senderId !== userId
+        const otherUser = otherIsSender ? msg.sender : msg.receiver
+        const otherId = otherUser?.id || (otherIsSender ? msg.senderId : msg.receiverId || '')
+
+        if (!otherId || !conversationMap.has(otherId)) {
+          const isAdmin = otherUser?.role === 'admin' || rawUserId === 'admin'
           conversationMap.set(otherId, {
             otherUserId: otherId,
-            otherUserName: otherId === 'admin'
-              ? 'Customer Support'
-              : (msg.sender?.name || otherId.slice(-8).toUpperCase()),
-            otherUserAvatar: otherId === 'admin' ? null : (msg.sender?.avatar || null),
+            otherUserName: otherUser?.name || (isAdmin ? 'Customer Support' : otherId.slice(-8).toUpperCase()),
+            otherUserAvatar: otherUser?.avatar || null,
             lastMessage: msg.message.slice(0, 50),
             lastMessageTime: msg.createdAt.toISOString(),
             unreadCount: 0,
             senderType: msg.senderType,
+            isOtherAdmin: otherUser?.role === 'admin',
           })
         }
 
@@ -78,8 +98,10 @@ export async function GET(request: NextRequest) {
 
     // ── Get user info ──
     if (action === 'user_info') {
-      const userId = searchParams.get('userId')
-      if (!userId) {
+      const rawUserId = searchParams.get('userId') || ''
+      const userId = await resolveAdminId(rawUserId)
+
+      if (!rawUserId) {
         return NextResponse.json({ error: 'userId is required' }, { status: 400, headers })
       }
 
@@ -89,6 +111,12 @@ export async function GET(request: NextRequest) {
       })
 
       if (!user) {
+        // If it was 'admin' and no admin user found, return a placeholder
+        if (rawUserId === 'admin') {
+          return NextResponse.json({
+            user: { id: 'admin', name: 'Customer Support', avatar: null, email: 'admin@banglabazar.com' }
+          }, { status: 200, headers })
+        }
         return NextResponse.json({ error: 'User not found' }, { status: 404, headers })
       }
 
@@ -96,15 +124,18 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Get messages between two users ──
-    const senderId = searchParams.get('senderId')
-    const userId = searchParams.get('userId')
+    const rawSenderId = searchParams.get('senderId') || ''
+    const rawUserId = searchParams.get('userId') || ''
 
-    if (!senderId || !userId) {
+    if (!rawSenderId || !rawUserId) {
       return NextResponse.json(
         { error: 'senderId and userId are required' },
         { status: 400, headers }
       )
     }
+
+    const senderId = await resolveAdminId(rawSenderId)
+    const userId = await resolveAdminId(rawUserId)
 
     // Fetch messages between these two users (both directions)
     const messages = await db.chatMessage.findMany({
@@ -137,7 +168,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { senderId, receiverId, message } = body
+    let { senderId, receiverId, message } = body
 
     if (!senderId || !receiverId || !message) {
       return NextResponse.json(
@@ -169,6 +200,10 @@ export async function POST(request: NextRequest) {
         { status: 400, headers }
       )
     }
+
+    // Resolve 'admin' to actual UUIDs
+    senderId = await resolveAdminId(senderId)
+    receiverId = await resolveAdminId(receiverId)
 
     // Determine sender type
     const sender = await db.user.findUnique({ where: { id: senderId }, select: { role: true, name: true } })
@@ -202,9 +237,13 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, senderId, receiverId } = body
+    let { action, senderId, receiverId } = body
 
     if (action === 'mark_read' && senderId && receiverId) {
+      // Resolve 'admin' to actual UUIDs
+      senderId = await resolveAdminId(senderId)
+      receiverId = await resolveAdminId(receiverId)
+
       await db.chatMessage.updateMany({
         where: {
           senderId,

@@ -242,7 +242,7 @@ export function LoginForm() {
           Don&apos;t have an account?{' '}
           <button
             onClick={() => navigate('register')}
-            className="text-[#FF6B9D] font-bold hover:underline"
+            className="text-[#22C55E] font-bold hover:underline"
           >
             Register
           </button>

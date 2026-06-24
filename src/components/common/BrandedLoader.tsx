@@ -23,7 +23,7 @@ export function BanglaBazarLoader({ size = 'md', text }: { size?: 'sm' | 'md' | 
         />
         {/* Inner ring - foreground border with pink bottom */}
         <motion.div
-          className="absolute rounded-full border-[2px] border-foreground border-b-[#FF6B9D]"
+          className="absolute rounded-full border-[2px] border-foreground border-b-[#22C55E]"
           style={{ top: 4, left: 4, right: 4, bottom: 4 }}
           animate={{ rotate: -360 }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
