@@ -134,7 +134,7 @@ interface DashboardStats {
   totalRevenue: number
 }
 
-type AdminView = 'dashboard' | 'products' | 'categories' | 'orders' | 'users' | 'user-logs' | 'chat'
+type AdminView = 'dashboard' | 'products' | 'categories' | 'orders' | 'users' | 'user-logs' | 'chat' | 'settings'
 
 // ═══════════════════════════════════════════════════════════════
 // API Helper
@@ -316,6 +316,15 @@ function ChatIcon({ className = 'w-5 h-5' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
+function SettingsIcon({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
   )
 }
@@ -2166,10 +2175,213 @@ interface AdminChatConversation {
   otherUserId: string
   otherUserName: string
   otherUserAvatar: string | null
+  otherUserPhone: string | null
   lastMessage: string
   lastMessageTime: string
   unreadCount: number
   senderType: string
+}
+
+// ── Chat helpers ──
+
+function relativeTime(dateStr: string): string {
+  try {
+    const now = new Date()
+    const date = new Date(dateStr)
+    const diffMs = now.getTime() - date.getTime()
+    const diffSec = Math.floor(diffMs / 1000)
+    const diffMin = Math.floor(diffSec / 60)
+    const diffHr = Math.floor(diffMin / 60)
+    const diffDay = Math.floor(diffHr / 24)
+
+    if (diffSec < 60) return 'just now'
+    if (diffMin < 60) return `${diffMin}m ago`
+    if (diffHr < 24) return `${diffHr}h ago`
+    if (diffDay < 7) return `${diffDay}d ago`
+    return formatDate(dateStr).split(',')[0]
+  } catch {
+    return dateStr
+  }
+}
+
+function getMessageGroupLabel(dateStr: string): string | null {
+  try {
+    const now = new Date()
+    const date = new Date(dateStr)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const diffMs = today.getTime() - msgDate.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  } catch {
+    return null
+  }
+}
+
+// ── Typing indicator dots animation ──
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1 px-3 py-2">
+      <span className="w-2 h-2 rounded-full bg-[#FFD700] animate-bounce" style={{ animationDelay: '0ms' }} />
+      <span className="w-2 h-2 rounded-full bg-[#FFD700] animate-bounce" style={{ animationDelay: '150ms' }} />
+      <span className="w-2 h-2 rounded-full bg-[#FFD700] animate-bounce" style={{ animationDelay: '300ms' }} />
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Settings View (Payment Numbers, Delivery Charge)
+// ═══════════════════════════════════════════════════════════════
+
+function SettingsView({ token }: { token: string }) {
+  const [bkashNumber, setBkashNumber] = useState('')
+  const [nagadNumber, setNagadNumber] = useState('')
+  const [codCharge, setCodCharge] = useState('60')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await adminFetch('/api/settings/payment', token)
+        if (res.ok) {
+          const data = await res.json()
+          setBkashNumber(data.bkashNumber || '')
+          setNagadNumber(data.nagadNumber || '')
+          setCodCharge(String(data.codDeliveryCharge || 60))
+        }
+      } catch {
+        // Use defaults
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSettings()
+  }, [token])
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaved(false)
+    try {
+      const res = await adminFetch('/api/settings/payment', token, {
+        method: 'PUT',
+        body: JSON.stringify({
+          bkashNumber: bkashNumber.trim(),
+          nagadNumber: nagadNumber.trim(),
+          codDeliveryCharge: Number(codCharge) || 60,
+        }),
+      })
+      if (res.ok) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch {
+      // handled
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-32 bg-[#1A1A1A]" />
+        {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 rounded-lg bg-[#1A1A1A]" />)}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-black text-white">Settings</h2>
+
+      {/* Payment Settings */}
+      <div className="bg-[#1A1A1A] rounded-xl border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] overflow-hidden">
+        <div className="p-6 border-b-[3px] border-foreground bg-[#FFD700]/10">
+          <h3 className="text-lg font-black text-white">Payment Numbers</h3>
+          <p className="text-sm text-gray-400 mt-1">These numbers are shown to customers at checkout for sending payment</p>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* bKash */}
+          <div className="space-y-2">
+            <Label className="text-white font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E2136E' }}>
+                <span className="text-white text-xs font-black">b</span>
+              </div>
+              bKash Number
+            </Label>
+            <Input
+              value={bkashNumber}
+              onChange={(e) => setBkashNumber(e.target.value)}
+              placeholder="01XXX-XXXXXX"
+              className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500 font-mono"
+            />
+            <p className="text-xs text-gray-500">Customers will send money to this bKash number</p>
+          </div>
+
+          {/* Nagad */}
+          <div className="space-y-2">
+            <Label className="text-white font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F6921E' }}>
+                <span className="text-white text-xs font-black">N</span>
+              </div>
+              Nagad Number
+            </Label>
+            <Input
+              value={nagadNumber}
+              onChange={(e) => setNagadNumber(e.target.value)}
+              placeholder="01XXX-XXXXXX"
+              className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500 font-mono"
+            />
+            <p className="text-xs text-gray-500">Customers will send money to this Nagad number</p>
+          </div>
+
+          {/* COD Delivery Charge */}
+          <div className="space-y-2">
+            <Label className="text-white font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#006A4E' }}>
+                <span className="text-white text-xs font-black">৳</span>
+              </div>
+              COD Delivery Charge (৳)
+            </Label>
+            <Input
+              type="number"
+              value={codCharge}
+              onChange={(e) => setCodCharge(e.target.value)}
+              placeholder="60"
+              min="0"
+              className="nb-input bg-[#0A0A0A] border-foreground text-white placeholder:text-gray-500 font-mono"
+            />
+            <p className="text-xs text-gray-500">Delivery charge added for Cash on Delivery orders. Set 0 for free delivery.</p>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex items-center gap-4 pt-2">
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="nb-btn bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save Settings'}
+            </Button>
+            {saved && (
+              <span className="text-[#22C55E] font-bold text-sm flex items-center gap-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Saved!
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function ChatTab({ token }: { token: string }) {
@@ -2180,7 +2392,10 @@ function ChatTab({ token }: { token: string }) {
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch all conversations (admin sees all)
   const fetchConversations = useCallback(async () => {
@@ -2201,9 +2416,17 @@ function ChatTab({ token }: { token: string }) {
     fetchConversations()
   }, [fetchConversations])
 
-  // Fetch messages for selected conversation
-  const fetchMessages = useCallback(async (userId: string) => {
-    setMessagesLoading(true)
+  // Auto-refresh conversations every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchConversations()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [fetchConversations])
+
+  // Fetch messages for selected conversation (silent=true skips loading spinner for polling)
+  const fetchMessages = useCallback(async (userId: string, silent = false) => {
+    if (!silent) setMessagesLoading(true)
     try {
       const res = await adminFetch(`/api/chat?senderId=${userId}&userId=admin`, token)
       if (res.ok) {
@@ -2213,7 +2436,7 @@ function ChatTab({ token }: { token: string }) {
     } catch {
       // handled
     } finally {
-      setMessagesLoading(false)
+      if (!silent) setMessagesLoading(false)
     }
   }, [token])
 
@@ -2221,6 +2444,15 @@ function ChatTab({ token }: { token: string }) {
     if (selectedUserId) {
       fetchMessages(selectedUserId)
     }
+  }, [selectedUserId, fetchMessages])
+
+  // Auto-refresh messages in active chat every 3 seconds (silent, no loading spinner)
+  useEffect(() => {
+    if (!selectedUserId) return
+    const interval = setInterval(() => {
+      fetchMessages(selectedUserId, true)
+    }, 3000)
+    return () => clearInterval(interval)
   }, [selectedUserId, fetchMessages])
 
   // Auto-scroll
@@ -2244,6 +2476,7 @@ function ChatTab({ token }: { token: string }) {
   const handleSend = async () => {
     if (!newMessage.trim() || !selectedUserId || sending) return
     setSending(true)
+    setIsTyping(false)
     try {
       const res = await adminFetch('/api/chat', token, {
         method: 'POST',
@@ -2260,6 +2493,8 @@ function ChatTab({ token }: { token: string }) {
           return [...prev, data.message]
         })
         setNewMessage('')
+        // Refresh conversations to update last message
+        fetchConversations()
       }
     } catch {
       // handled
@@ -2273,6 +2508,50 @@ function ChatTab({ token }: { token: string }) {
       e.preventDefault()
       handleSend()
     }
+  }
+
+  // Typing indicator logic
+  const handleInputChange = (value: string) => {
+    setNewMessage(value)
+    if (value.trim()) {
+      setIsTyping(true)
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 1500)
+    } else {
+      setIsTyping(false)
+    }
+  }
+
+  // Filter conversations by search
+  const filteredConversations = conversations.filter(conv =>
+    conv.otherUserName.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  // Get selected conversation info
+  const selectedConv = conversations.find(c => c.otherUserId === selectedUserId)
+
+  // Group messages by date
+  const getMessageGroups = () => {
+    const groups: { label: string; messages: AdminChatMessage[] }[] = []
+    let currentLabel = ''
+    let currentMessages: AdminChatMessage[] = []
+
+    for (const msg of messages) {
+      const label = getMessageGroupLabel(msg.createdAt) || ''
+      if (label !== currentLabel) {
+        if (currentMessages.length > 0) {
+          groups.push({ label: currentLabel, messages: currentMessages })
+        }
+        currentLabel = label
+        currentMessages = [msg]
+      } else {
+        currentMessages.push(msg)
+      }
+    }
+    if (currentMessages.length > 0) {
+      groups.push({ label: currentLabel, messages: currentMessages })
+    }
+    return groups
   }
 
   if (loading) {
@@ -2290,20 +2569,40 @@ function ChatTab({ token }: { token: string }) {
 
       <div className="nb-card-static bg-[#1A1A1A] flex flex-col lg:flex-row h-[calc(100vh-14rem)] overflow-hidden">
         {/* Conversation List */}
-        <div className="w-full lg:w-80 border-r-[3px] border-foreground shrink-0 flex flex-col">
-          <div className="p-4 border-b-[3px] border-foreground bg-[#FFD700]/10">
+        <div className={`w-full lg:w-80 border-r-[3px] border-foreground shrink-0 flex flex-col ${
+          selectedUserId ? 'hidden lg:flex' : 'flex'
+        }`}>
+          {/* Header with search */}
+          <div className="p-4 border-b-[3px] border-foreground bg-[#FFD700]/10 space-y-3">
             <h3 className="text-sm font-black text-white">CONVERSATIONS</h3>
+            <div className="relative">
+              <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search by name..."
+                className="nb-input w-full pl-9 pr-4 py-2 bg-[#0A0A0A] text-white text-sm placeholder:text-gray-500"
+              />
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto max-h-96 lg:max-h-none">
-            {conversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3 border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] bg-[#FFD700]/10">
-                  <ChatIcon className="w-6 h-6 text-[#FFD700]" />
+
+          {/* Conversation items */}
+          <div className="flex-1 overflow-y-auto max-h-[calc(100vh-20rem)] lg:max-h-none">
+            {filteredConversations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 border-[2px] border-foreground shadow-[3px_3px_0px_var(--foreground)] bg-[#FFD700]/10">
+                  <ChatIcon className="w-7 h-7 text-[#FFD700]" />
                 </div>
-                <p className="text-sm text-gray-400 font-bold">No conversations yet</p>
+                <p className="text-sm text-gray-400 font-black mb-1">
+                  {searchQuery ? 'No matches found' : 'No conversations yet'}
+                </p>
+                <p className="text-xs text-gray-500 font-medium">
+                  {searchQuery ? 'Try a different search term' : 'Customer chats will appear here'}
+                </p>
               </div>
             ) : (
-              conversations.map(conv => (
+              filteredConversations.map(conv => (
                 <button
                   key={conv.otherUserId}
                   onClick={() => setSelectedUserId(conv.otherUserId)}
@@ -2323,20 +2622,24 @@ function ChatTab({ token }: { token: string }) {
                         </span>
                       </div>
                     )}
-                    {conv.unreadCount > 0 && (
-                      <span className="nb-badge absolute -top-1 -right-1 bg-[#22C55E] text-white text-[9px] min-w-[16px] h-[16px] px-0.5">
-                        {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
-                      </span>
-                    )}
+                    {/* Online indicator dot */}
+                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-[2px] border-[#1A1A1A] bg-[#22C55E]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-extrabold text-white truncate">{conv.otherUserName}</h4>
                       <span className="text-[10px] text-gray-500 shrink-0 ml-2 font-bold">
-                        {formatDate(conv.lastMessageTime).split(',')[0]}
+                        {relativeTime(conv.lastMessageTime)}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{conv.lastMessage}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400 truncate mt-0.5">{conv.lastMessage}</p>
+                      {conv.unreadCount > 0 && (
+                        <span className="ml-2 shrink-0 nb-badge bg-[#22C55E] text-white text-[9px] min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+                          {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
               ))
@@ -2345,7 +2648,9 @@ function ChatTab({ token }: { token: string }) {
         </div>
 
         {/* Message Area */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className={`flex-1 flex flex-col min-h-0 ${
+          selectedUserId ? 'flex' : 'hidden lg:flex'
+        }`}>
           {selectedUserId ? (
             <>
               {/* Chat header */}
@@ -2356,14 +2661,30 @@ function ChatTab({ token }: { token: string }) {
                 >
                   <ChevronLeftIcon className="w-4 h-4" />
                 </button>
-                <div className="w-8 h-8 rounded-full bg-[#4ECDC4]/20 flex items-center justify-center border-[2px] border-foreground">
-                  <span className="text-[#4ECDC4] font-black text-xs">
-                    {(conversations.find(c => c.otherUserId === selectedUserId)?.otherUserName?.[0]?.toUpperCase() || 'U')}
-                  </span>
+                <div className="relative">
+                  <div className="w-9 h-9 rounded-full bg-[#4ECDC4]/20 flex items-center justify-center border-[2px] border-foreground">
+                    <span className="text-[#4ECDC4] font-black text-xs">
+                      {(selectedConv?.otherUserName?.[0]?.toUpperCase() || 'U')}
+                    </span>
+                  </div>
+                  {/* Online indicator on header avatar */}
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-[2px] border-[#1A1A1A] bg-[#22C55E]" />
                 </div>
-                <h3 className="text-sm font-black text-white">
-                  {conversations.find(c => c.otherUserId === selectedUserId)?.otherUserName || selectedUserId.slice(-8)}
-                </h3>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-black text-white truncate">
+                    {selectedConv?.otherUserName || selectedUserId.slice(-8)}
+                  </h3>
+                  {selectedConv?.otherUserPhone && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <PhoneIcon className="w-3 h-3 text-gray-500" />
+                      <span className="text-[11px] text-gray-400 font-medium">{selectedConv.otherUserPhone}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+                  <span className="text-[10px] text-[#22C55E] font-bold">Online</span>
+                </div>
               </div>
 
               {/* Messages */}
@@ -2374,45 +2695,68 @@ function ChatTab({ token }: { token: string }) {
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3 border-[2px] border-foreground shadow-[3px_3px_0px_var(--foreground)] bg-[#FFD700]/10">
-                      <ChatIcon className="w-7 h-7 text-[#FFD700]" />
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 border-[3px] border-foreground shadow-[4px_4px_0px_var(--foreground)] bg-[#FFD700]/10">
+                      <ChatIcon className="w-9 h-9 text-[#FFD700]" />
                     </div>
-                    <p className="text-sm text-gray-400 font-black">No messages yet</p>
+                    <p className="text-base font-black text-white mb-1">No messages yet</p>
+                    <p className="text-sm text-gray-400 font-medium">Start the conversation by sending a message</p>
                   </div>
                 ) : (
-                  messages.map(msg => {
-                    const isAdmin = msg.senderId === 'admin' || msg.senderType === 'admin'
-                    return (
-                      <div key={msg.id} className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
-                        <span className="text-[10px] text-gray-500 font-bold mb-0.5">
-                          {isAdmin ? 'You (Admin)' : msg.senderName || 'Customer'}
+                  getMessageGroups().map(group => (
+                    <div key={group.label}>
+                      {/* Date group header */}
+                      <div className="flex items-center gap-3 my-4">
+                        <div className="flex-1 h-[2px] bg-foreground/20" />
+                        <span className="text-[10px] text-gray-500 font-bold bg-[#1A1A1A] px-3 py-1 border-[2px] border-foreground/20 rounded-full">
+                          {group.label}
                         </span>
-                        <div
-                          className={`max-w-[80%] px-4 py-2.5 rounded-xl text-sm leading-relaxed font-medium ${
-                            isAdmin
-                              ? 'bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
-                              : 'bg-card text-white border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
-                          }`}
-                        >
-                          <p className="break-words">{msg.message}</p>
-                        </div>
-                        <span className="text-[10px] text-gray-500 font-bold mt-0.5">
-                          {formatDate(msg.createdAt).split(',')[1] || formatDate(msg.createdAt)}
-                        </span>
+                        <div className="flex-1 h-[2px] bg-foreground/20" />
                       </div>
-                    )
-                  })
+                      {/* Messages in this group */}
+                      {group.messages.map(msg => {
+                        const isAdmin = msg.senderId === 'admin' || msg.senderType === 'admin'
+                        return (
+                          <div key={msg.id} className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'} mb-3`}>
+                            <span className="text-[10px] text-gray-500 font-bold mb-0.5">
+                              {isAdmin ? 'You (Admin)' : msg.senderName || 'Customer'}
+                            </span>
+                            <div
+                              className={`max-w-[80%] px-4 py-2.5 rounded-xl text-sm leading-relaxed font-medium ${
+                                isAdmin
+                                  ? 'bg-[#FFD700] text-[#0A0A0A] border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
+                                  : 'bg-card text-white border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)]'
+                              }`}
+                            >
+                              <p className="break-words">{msg.message}</p>
+                            </div>
+                            <span className="text-[10px] text-gray-500 font-bold mt-0.5">
+                              {new Date(msg.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))
+                )}
+
+                {/* Typing indicator */}
+                {isTyping && (
+                  <div className="flex items-start gap-2">
+                    <div className="bg-card text-white border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] rounded-xl">
+                      <TypingDots />
+                    </div>
+                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
-              <div className="border-t-[3px] border-foreground px-4 py-3">
+              {/* Sticky Input */}
+              <div className="sticky bottom-0 border-t-[3px] border-foreground px-4 py-3 bg-[#1A1A1A]">
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
+                    onChange={e => handleInputChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Type a message..."
                     disabled={sending}
@@ -2459,6 +2803,7 @@ const navItems: { key: AdminView; label: string; icon: React.ReactNode }[] = [
   { key: 'users', label: 'Users', icon: <UsersIcon /> },
   { key: 'user-logs', label: 'User Logs', icon: <FileTextIcon /> },
   { key: 'chat' as AdminView, label: 'Chat', icon: <ChatIcon /> },
+  { key: 'settings' as AdminView, label: 'Settings', icon: <SettingsIcon /> },
 ]
 
 function Sidebar({
@@ -2651,6 +2996,8 @@ export default function AdminPage() {
         return <UserLogsView token={auth.adminToken} />
       case 'chat':
         return <ChatTab token={auth.adminToken} />
+      case 'settings':
+        return <SettingsView token={auth.adminToken} />
       default:
         return <DashboardView token={auth.adminToken} />
     }

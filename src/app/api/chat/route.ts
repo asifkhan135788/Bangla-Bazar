@@ -44,10 +44,10 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           sender: {
-            select: { id: true, name: true, avatar: true, email: true, role: true },
+            select: { id: true, name: true, avatar: true, email: true, role: true, phone: true },
           },
           receiver: {
-            select: { id: true, name: true, avatar: true, email: true, role: true },
+            select: { id: true, name: true, avatar: true, email: true, role: true, phone: true },
           },
         },
       })
@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
         otherUserId: string
         otherUserName: string
         otherUserAvatar: string | null
+        otherUserPhone: string | null
         lastMessage: string
         lastMessageTime: string
         unreadCount: number
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
             otherUserId: otherId,
             otherUserName: otherUser?.name || (isAdmin ? 'Customer Support' : otherId.slice(-8).toUpperCase()),
             otherUserAvatar: otherUser?.avatar || null,
+            otherUserPhone: otherUser?.phone || null,
             lastMessage: msg.message.slice(0, 50),
             lastMessageTime: msg.createdAt.toISOString(),
             unreadCount: 0,

@@ -107,7 +107,7 @@ function EmojiPicker({
   return (
     <div
       ref={pickerRef}
-      className="absolute bottom-full left-0 mb-2 p-3 bg-card border-[2px] border-foreground shadow-[4px_4px_0px_var(--foreground)] rounded-lg z-50 w-72"
+      className="absolute bottom-full left-0 mb-2 p-3 bg-card border-[2px] border-foreground shadow-[4px_4px_0px_var(--foreground)] rounded-lg z-50 w-72 max-w-[calc(100vw-2rem)]"
     >
       <div className="grid grid-cols-8 gap-1">
         {EMOJI_LIST.map((emoji) => (
@@ -866,25 +866,16 @@ function ChatRoom({
       </AnimatePresence>
 
       {/* Input Area */}
-      <div className="border-t-[3px] border-foreground bg-card px-4 py-3">
-        <div className="flex items-center gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={newMessage}
-            onChange={(e) => handleInputChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={t('typeMessage')}
-            disabled={sending}
-            className="nb-input flex-1 px-4 py-3 bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700] disabled:opacity-50"
-          />
-          <div className="relative">
+      <div className="border-t-[3px] border-foreground bg-card px-2 sm:px-4 py-2 sm:py-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Emoji button - LEFT side */}
+          <div className="relative shrink-0">
             <button
               onClick={() => setShowEmojiPicker((prev) => !prev)}
-              className="nb-btn-sm bg-card text-foreground hover:bg-[#FFD700]/10 active:scale-95"
+              className="flex items-center justify-center w-10 h-10 sm:w-9 sm:h-9 rounded-lg bg-card text-foreground hover:bg-[#FFD700]/10 active:scale-95 border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] transition-all"
               aria-label="Open emoji picker"
             >
-              <Smile className="h-4 w-4" />
+              <Smile className="h-5 w-5 sm:h-4 sm:w-4" />
             </button>
             {showEmojiPicker && (
               <EmojiPicker
@@ -893,16 +884,30 @@ function ChatRoom({
               />
             )}
           </div>
+
+          {/* Input - takes full available width */}
+          <input
+            ref={inputRef}
+            type="text"
+            value={newMessage}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={t('typeMessage')}
+            disabled={sending}
+            className="nb-input flex-1 min-w-0 px-3 sm:px-4 py-3 bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FFD700]/30 focus:border-[#FFD700] disabled:opacity-50"
+          />
+
+          {/* Send button - RIGHT side */}
           <button
             onClick={handleSend}
             disabled={sending || !newMessage.trim()}
-            className="nb-btn-sm bg-[#FFD700] text-[#0A0A0A] disabled:opacity-40 active:scale-95"
+            className="flex items-center justify-center w-11 h-11 sm:w-10 sm:h-10 rounded-lg bg-[#FFD700] text-[#0A0A0A] disabled:opacity-40 active:scale-90 border-[2px] border-foreground shadow-[2px_2px_0px_var(--foreground)] hover:shadow-[1px_1px_0px_var(--foreground)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all shrink-0"
             aria-label="Send message"
           >
             {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Send className="h-4 w-4" />
+              <Send className="h-5 w-5" />
             )}
           </button>
         </div>

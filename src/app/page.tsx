@@ -49,32 +49,8 @@ function HomeView() {
 }
 
 export default function Home() {
-  const { currentView, selectedProductId, navigate } = useNavStore()
+  const { currentView, selectedProductId } = useNavStore()
   const { login, user, isAuthenticated } = useAuthStore()
-
-  // Restore view from URL on first load
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search)
-      const view = params.get('view')
-      const productId = params.get('productId')
-      const category = params.get('category')
-      const query = params.get('query')
-      const senderId = params.get('senderId')
-
-      if (view) {
-        navigate(view as any, {
-          productId: productId || undefined,
-          category: category || undefined,
-          query: query || undefined,
-          senderId: senderId || undefined,
-        })
-      }
-    } catch {
-      // Ignore
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     try {
