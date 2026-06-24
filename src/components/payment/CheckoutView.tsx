@@ -66,6 +66,9 @@ export function CheckoutView() {
     paymentMethod: PaymentMethod
   } | null>(null)
 
+  // Saved address from user profile
+  const [savedAddress, setSavedAddress] = useState<{ zilla: string; upazila: string; gram: string; home: string } | null>(null)
+
   // Payment settings from API
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
     bkashNumber: '0171-0000000',
@@ -76,7 +79,7 @@ export function CheckoutView() {
   // Copy button state
   const [copied, setCopied] = useState(false)
 
-  // Fetch payment settings
+  // Fetch payment settings and check for saved address
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -90,7 +93,26 @@ export function CheckoutView() {
       }
     }
     fetchSettings()
-  }, [])
+
+    // Check for saved address in user profile
+    if (user?.address) {
+      try {
+        const parsed = JSON.parse(user.address)
+        if (parsed && typeof parsed === 'object' && parsed.zilla !== undefined) {
+          if (parsed.zilla || parsed.upazila || parsed.gram || parsed.home) {
+            setSavedAddress({
+              zilla: parsed.zilla || '',
+              upazila: parsed.upazila || '',
+              gram: parsed.gram || '',
+              home: parsed.home || '',
+            })
+          }
+        }
+      } catch {
+        // Not structured JSON, ignore
+      }
+    }
+  }, [user])
 
   const deliveryFee = paymentMethod === 'cod'
     ? paymentSettings.codDeliveryCharge
@@ -202,6 +224,18 @@ export function CheckoutView() {
     // This is now unused, but kept for compatibility
   }
 
+  // Use saved address from profile
+  const handleUseSavedAddress = () => {
+    if (savedAddress) {
+      setZilla(savedAddress.zilla)
+      setUpazila(savedAddress.upazila)
+      setGram(savedAddress.gram)
+      setHome(savedAddress.home)
+      // Clear any address-related errors
+      setErrors((prev) => ({ ...prev, zilla: undefined, upazila: undefined, home: undefined }))
+    }
+  }
+
   // Get full address string from structured fields
   const getFullAddress = () => {
     const parts = [home, gram, upazila, zilla].filter(Boolean)
@@ -221,10 +255,11 @@ export function CheckoutView() {
     setLocationLoading(true)
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLiveLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        })
+        const lat = position.coords.latitude
+        const lng = position.coords.longitude
+        setLiveLocation({ lat, lng })
+        setManualLat(lat.toString())
+        setManualLng(lng.toString())
         setLocationLoading(false)
         toast.success('Location captured successfully!')
       },
@@ -297,7 +332,7 @@ export function CheckoutView() {
     setLoading(true)
 
     try {
-      // Create order
+      // Create order — send cart items directly so the API doesn't depend on DB cart
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -309,6 +344,8 @@ export function CheckoutView() {
           paymentMethod,
           transactionId: transactionId || undefined,
           note: note || undefined,
+          deliveryFee,
+          items: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
         }),
       })
 
@@ -581,6 +618,24 @@ export function CheckoutView() {
             <label className="block text-sm font-bold text-foreground mb-1.5">
               Delivery Address <span className="text-[#f42a41]">*</span>
             </label>
+
+            {/* Use Saved Address Button */}
+            {savedAddress && (
+              <button
+                type="button"
+                onClick={handleUseSavedAddress}
+                className="w-full mb-3 py-2.5 px-4 rounded-xl text-sm font-bold flex items-center gap-2 border-[2.5px] border-[#22C55E] bg-[#22C55E]/10 text-[#22C55E] hover:bg-[#22C55E]/20 transition-colors shadow-[2px_2px_0px_var(--foreground)]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                Use Saved Address
+                <span className="ml-auto text-xs opacity-70 truncate max-w-[160px]">
+                  {[savedAddress.home, savedAddress.upazila, savedAddress.zilla].filter(Boolean).join(', ')}
+                </span>
+              </button>
+            )}
 
             {/* Zilla (District) */}
             <div className="mb-2">

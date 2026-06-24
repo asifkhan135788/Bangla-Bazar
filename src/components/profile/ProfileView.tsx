@@ -64,6 +64,10 @@ export function ProfileView() {
   const [editName, setEditName] = useState('')
   const [editPhone, setEditPhone] = useState('')
   const [editAddress, setEditAddress] = useState('')
+  const [editZilla, setEditZilla] = useState('')
+  const [editUpazila, setEditUpazila] = useState('')
+  const [editGram, setEditGram] = useState('')
+  const [editHome, setEditHome] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
 
@@ -119,7 +123,25 @@ export function ProfileView() {
   const handleStartEdit = () => {
     setEditName(user.name || '')
     setEditPhone(user.phone || '')
-    setEditAddress(user.address || '')
+    // Try to parse address as structured JSON
+    let parsedAddr = { zilla: '', upazila: '', gram: '', home: '', raw: '' }
+    if (user.address) {
+      try {
+        const parsed = JSON.parse(user.address)
+        if (parsed && typeof parsed === 'object' && parsed.zilla !== undefined) {
+          parsedAddr = parsed
+        } else {
+          parsedAddr.raw = user.address
+        }
+      } catch {
+        parsedAddr.raw = user.address
+      }
+    }
+    setEditAddress(parsedAddr.raw || '')
+    setEditZilla(parsedAddr.zilla || '')
+    setEditUpazila(parsedAddr.upazila || '')
+    setEditGram(parsedAddr.gram || '')
+    setEditHome(parsedAddr.home || '')
     setEditing(true)
   }
 
@@ -130,15 +152,47 @@ export function ProfileView() {
     }
     setEditLoading(true)
     try {
+      // Build structured address as JSON if any structured field is filled
+      const hasStructured = editZilla.trim() || editUpazila.trim() || editGram.trim() || editHome.trim()
+      let addressToSave = editAddress.trim()
+      if (hasStructured) {
+        const structuredAddr = JSON.stringify({
+          zilla: editZilla.trim(),
+          upazila: editUpazila.trim(),
+          gram: editGram.trim(),
+          home: editHome.trim(),
+        })
+        addressToSave = structuredAddr
+      }
+
+      // Persist to server
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_profile',
+          userId: user.id,
+          name: editName.trim(),
+          phone: editPhone.trim(),
+          address: addressToSave,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update profile')
+      }
+
+      // Update local store
       updateUser({
         name: editName.trim(),
         phone: editPhone.trim(),
-        address: editAddress.trim(),
+        address: addressToSave,
       })
       setEditing(false)
       toast.success(t('profileUpdated'))
-    } catch {
-      toast.error(t('error'))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('error'))
     } finally {
       setEditLoading(false)
     }
@@ -376,6 +430,20 @@ export function ProfileView() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">
+                    {t('email')}
+                  </label>
+                  <input
+                    type="email"
+                    value={user.email}
+                    readOnly
+                    className="nb-input w-full px-3 py-2 text-sm bg-muted/50 cursor-not-allowed opacity-70"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
+                    {language === 'en' ? 'Email cannot be changed' : 'ইমেইল পরিবর্তন করা যাবে না'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">
                     {t('phone')}
                   </label>
                   <input
@@ -387,12 +455,49 @@ export function ProfileView() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">
-                    {t('address')}
+                    {language === 'en' ? 'District (Zilla)' : 'জেলা'}
                   </label>
                   <input
                     type="text"
-                    value={editAddress}
-                    onChange={(e) => setEditAddress(e.target.value)}
+                    value={editZilla}
+                    onChange={(e) => setEditZilla(e.target.value)}
+                    placeholder={language === 'en' ? 'e.g. Dhaka, Chittagong' : 'যেমন: ঢাকা, চট্টগ্রাম'}
+                    className="nb-input w-full px-3 py-2 text-sm bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">
+                    {language === 'en' ? 'Upazila' : 'উপজেলা'}
+                  </label>
+                  <input
+                    type="text"
+                    value={editUpazila}
+                    onChange={(e) => setEditUpazila(e.target.value)}
+                    placeholder={language === 'en' ? 'e.g. Mirpur, Sadar' : 'যেমন: মিরপুর, সদর'}
+                    className="nb-input w-full px-3 py-2 text-sm bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">
+                    {language === 'en' ? 'Village/Area' : 'গ্রাম/এলাকা'}
+                  </label>
+                  <input
+                    type="text"
+                    value={editGram}
+                    onChange={(e) => setEditGram(e.target.value)}
+                    placeholder={language === 'en' ? 'e.g. Rupnagar (optional)' : 'যেমন: রূপনগর (ঐচ্ছিক)'}
+                    className="nb-input w-full px-3 py-2 text-sm bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">
+                    {language === 'en' ? 'Home/Holding No.' : 'বাড়ি/হোল্ডিং নং'}
+                  </label>
+                  <input
+                    type="text"
+                    value={editHome}
+                    onChange={(e) => setEditHome(e.target.value)}
+                    placeholder={language === 'en' ? 'e.g. 12/3A' : 'যেমন: ১২/৩এ'}
                     className="nb-input w-full px-3 py-2 text-sm bg-background"
                   />
                 </div>
@@ -436,9 +541,18 @@ export function ProfileView() {
                 {user.phone && (
                   <p className="text-xs text-muted-foreground mt-0.5 font-semibold">{user.phone}</p>
                 )}
-                {user.address && (
-                  <p className="text-xs text-muted-foreground truncate font-semibold">{user.address}</p>
-                )}
+                {user.address && (() => {
+                  try {
+                    const parsed = JSON.parse(user.address)
+                    if (parsed && typeof parsed === 'object' && parsed.zilla !== undefined) {
+                      const parts = [parsed.home, parsed.gram, parsed.upazila, parsed.zilla].filter(Boolean)
+                      return <p className="text-xs text-muted-foreground truncate font-semibold">{parts.join(', ')}</p>
+                    }
+                  } catch {
+                    // Not JSON, show raw
+                  }
+                  return <p className="text-xs text-muted-foreground truncate font-semibold">{user.address}</p>
+                })()}
               </motion.div>
             )}
           </AnimatePresence>

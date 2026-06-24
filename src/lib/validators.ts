@@ -70,6 +70,11 @@ export const addToCartSchema = z.object({
 })
 
 // Order schemas
+export const checkoutItemSchema = z.object({
+  productId: z.string().min(1, 'Product ID is required'),
+  quantity: z.number().int().min(1, 'Quantity must be at least 1'),
+})
+
 export const checkoutSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
   name: z.string().min(2, 'Name is required').max(100, 'Name too long').optional(),
@@ -78,6 +83,8 @@ export const checkoutSchema = z.object({
   paymentMethod: z.enum(['cod', 'bkash', 'nagad', 'rocket', 'card']).default('cod'),
   transactionId: z.string().optional(),
   note: z.string().optional(),
+  deliveryFee: z.number().min(0).default(0),
+  items: z.array(checkoutItemSchema).min(1, 'Cart must have at least one item'),
 })
 
 // Admin schemas

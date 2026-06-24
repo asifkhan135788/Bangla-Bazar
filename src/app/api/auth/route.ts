@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { loginSchema, registerSchema } from '@/lib/validators'
-import { getSecurityHeaders, loginRateLimiter, getClientIP, sanitizeInput, checkAndUnbanExpired } from '@/lib/security'
+import { getSecurityHeaders, loginRateLimiter, getClientIP, sanitizeInput, checkAndUnbanExpired, isValidId } from '@/lib/security'
 import bcrypt from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -189,8 +189,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404, headers })
     }
 
+    // UPDATE PROFILE
+    if (action === 'update_profile') {
+      const { userId, name, phone, address } = body
+      if (!userId || !isValidId(userId)) {
+        return NextResponse.json({ error: 'Valid user ID is required' }, { status: 400, headers })
+      }
+
+      const user = await db.user.findUnique({ where: { id: userId } })
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404, headers })
+      }
+
+      const updateData: Record<string, string | undefined> = {}
+      if (name !== undefined) updateData.name = sanitizeInput(name)
+      if (phone !== undefined) updateData.phone = sanitizeInput(phone)
+      if (address !== undefined) updateData.address = sanitizeInput(address)
+
+      const updatedUser = await db.user.update({
+        where: { id: userId },
+        data: updateData,
+      })
+
+      const { password: _, ...userWithoutPassword } = updatedUser
+      return NextResponse.json({ user: userWithoutPassword, message: 'Profile updated successfully' }, { status: 200, headers })
+    }
+
     return NextResponse.json(
-      { error: 'Invalid action. Use action: "login", "register", or "check_ban"' },
+      { error: 'Invalid action. Use action: "login", "register", "update_profile", or "check_ban"' },
       { status: 400, headers }
     )
   } catch (error) {

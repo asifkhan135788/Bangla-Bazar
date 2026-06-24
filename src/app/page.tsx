@@ -25,6 +25,7 @@ import { PrivacyView } from '@/components/legal/PrivacyView'
 import { TermsView } from '@/components/legal/TermsView'
 import { AboutView } from '@/components/legal/AboutView'
 import { ImageSwiper } from '@/components/home/ImageSwiper'
+import { OrdersView } from '@/components/orders/OrdersView'
 
 function HomeView() {
   return (
@@ -125,6 +126,8 @@ export default function Home() {
         return <LoginForm />
       case 'register':
         return <RegisterForm />
+      case 'orders':
+        return <OrdersView />
       case 'chat':
         return <ChatView />
       case 'privacy':

@@ -62,34 +62,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid input', details: result.error.issues }, { status: 400, headers })
     }
 
-    const { userId, address, phone, paymentMethod, transactionId, note } = result.data
+    const { userId, address, phone, paymentMethod, transactionId, note, deliveryFee, items } = result.data
 
-    const cartItems = await db.cart.findMany({
-      where: { userId },
-      include: { product: { select: { id: true, name: true, price: true, salePrice: true, images: true, stock: true, active: true } } },
-    })
-
-    if (cartItems.length === 0) {
+    if (items.length === 0) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400, headers })
     }
 
+    // Look up product details from the database for each item
     let total = new Prisma.Decimal(0)
     const orderItemsData: Array<{ productId: string; quantity: number; price: Prisma.Decimal; name: string; image: string | null }> = []
 
-    for (const item of cartItems) {
-      if (!item.product.active) {
-        return NextResponse.json({ error: `Product "${item.product.name}" is no longer available` }, { status: 400, headers })
+    for (const item of items) {
+      const product = await db.product.findUnique({ where: { id: item.productId } })
+      if (!product) {
+        return NextResponse.json({ error: `Product not found (ID: ${item.productId})` }, { status: 400, headers })
       }
-      if (item.product.stock < item.quantity) {
-        return NextResponse.json({ error: `Insufficient stock for "${item.product.name}"`, available: item.product.stock }, { status: 400, headers })
+      if (!product.active) {
+        return NextResponse.json({ error: `Product "${product.name}" is no longer available` }, { status: 400, headers })
+      }
+      if (product.stock < item.quantity) {
+        return NextResponse.json({ error: `Insufficient stock for "${product.name}"`, available: product.stock }, { status: 400, headers })
       }
 
-      const price = item.product.salePrice ?? item.product.price
+      const price = product.salePrice ?? product.price
       total = total.add(price.mul(item.quantity))
-      const image: string | null = item.product.images?.[0] || null
+      const image: string | null = product.images?.[0] || null
 
-      orderItemsData.push({ productId: item.product.id, quantity: item.quantity, price, name: item.product.name, image })
+      orderItemsData.push({ productId: product.id, quantity: item.quantity, price, name: product.name, image })
     }
+
+    // Add delivery fee to total
+    total = total.add(new Prisma.Decimal(deliveryFee))
 
     const order = await db.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
@@ -98,9 +101,10 @@ export async function POST(request: Request) {
       for (const itemData of orderItemsData) {
         await tx.orderItem.create({ data: { orderId: newOrder.id, productId: itemData.productId, quantity: itemData.quantity, price: itemData.price, name: itemData.name, image: itemData.image } })
       }
-      for (const item of cartItems) {
+      for (const item of items) {
         await tx.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.quantity }, buyCount: { increment: item.quantity } } })
       }
+      // Also clear any stale DB cart items for this user
       await tx.cart.deleteMany({ where: { userId } })
       return newOrder
     })
